@@ -13,8 +13,14 @@ The Voting App is a real-time web application that enables users to create topic
 ## Screenshots
 
 1. **Create Topic Page**
-2. **Vote Page**
-3. **Results Page**
+   ![Screenshot 2024-10-22 132302](https://github.com/user-attachments/assets/5aeecd85-b30b-4cff-b810-a5605aab19ec)
+   ![Screenshot 2024-10-22 132333](https://github.com/user-attachments/assets/84c09e88-9f2d-4e8d-81f0-e87f4f42941c)
+
+3. **Vote Page**
+   ![Screenshot 2024-10-22 132410](https://github.com/user-attachments/assets/2d42b96d-471a-4e2e-8af4-d297eea35060)
+
+5. **Results Page**
+   ![Screenshot 2024-10-22 132422](https://github.com/user-attachments/assets/fee410a4-a7f5-426e-95ff-8e70be80138f)
 
 ## Technologies Used
 
