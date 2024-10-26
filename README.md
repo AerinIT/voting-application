@@ -116,11 +116,11 @@ The Voting App is a real-time web application that enables users to create topic
 1. **Clone the repository**:
     ```bash
     git clone https://github.com/your-username/voting-app.git
-    cd voting-app/backend
     ```
 
 2. **Install dependencies**:
     ```bash
+    cd voting-app/voting-app-server
     npm install
     # or
     yarn install
@@ -135,7 +135,7 @@ The Voting App is a real-time web application that enables users to create topic
 
 1. **Navigate to the frontend directory**:
     ```bash
-    cd ../frontend
+    cd ../voting-app-client
     ```
 
 2. **Install dependencies**:
