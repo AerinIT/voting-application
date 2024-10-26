@@ -50,15 +50,15 @@ Download the latest .msi installer.
      Open the command prompt and navigate to the Redis installation directory.
      Run the command:
      ```bash
-            redis-server
+     redis-server
             
 ### For Ubuntu
 1. Update package index:
      ```bash
-            sudo apt update
+     sudo apt update
 2. Install Redis:
      ```bash
-                sudo apt install redis-server
+     sudo apt install redis-server
      
 3. Start Redis server:
       ```bash
@@ -105,22 +105,22 @@ You should receive a response of PONG.
 
 3. Start the backend server:
    ```bash
-        node server.js
-        Frontend Setup
+   node server.js
+   Frontend Setup
 
 4.  Navigate to the frontend directory:
     ```bash
-        cd ../frontend
+    cd ../frontend
 
 5. Install dependencies:
     ```bash
-        npm install
-        # or
-        yarn install
+    npm install
+    # or
+    yarn install
 
 6. Start the frontend server:
    ```bash
-        npm start
+   npm start
 
 
 **API Endpoints**:
@@ -133,29 +133,43 @@ You should receive a response of PONG.
   
   GET /api/topics/results: Retrieves voting results.
 
-**Database Structure**:
+****Database Structure****:
+
   Topics: Stored in Redis as hash fields. Each topic includes a description.
   Votes: Stored as JSON strings in Redis, tracking user votes for each topic.
 
- **Node Dependencies**:
-    1. Frontend
+ ****Node Dependencies****:
+ 
+  1. Frontend
+     
         react: For building the user interface.
+     
         react-router-dom: For routing between pages.
+     
         axios: For making HTTP requests.
+     
         framer-motion: For animations.
+     
         tailwindcss: For styling.
         
-2. Backend
-        express: For server setup.
-        body-parser: For parsing request bodies.
-        cors: For enabling CORS.
-        redis: For connecting to the Redis database.
+3. Backend
+   
+   express: For server setup.
+   
+   body-parser: For parsing request bodies.
+   
+   cors: For enabling CORS.
+   
+   redis: For connecting to the Redis database.
         
-  **Contributing**:
-      Contributions are welcome! If you'd like to report a bug or suggest a feature, please open an issue on the GitHub repository.
+  ****Contributing****:
+  
+   Contributions are welcome! If you'd like to report a bug or suggest a feature, please open an issue on the GitHub repository.
 
-  **License**:
-      This project is licensed under the MIT License.
+  ****License****:
+  
+  This project is licensed under the MIT License.
 
-  **Acknowledgments**:
-      Special thanks to the communities and libraries that made this project possible.
+  ****Acknowledgments****:
+  
+  Special thanks to the communities and libraries that made this project possible.
