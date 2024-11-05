@@ -12,7 +12,7 @@ const Results = () => {
     useEffect(() => {
         const fetchResults = async () => {
             try {
-                const response = await axios.get(`http://localhost:5000/api/topics/${topic}/results`);
+                const response = await axios.get(`http://13.49.224.166:5000/api/topics/${topic}/results`);
                 setResults(response.data);
             } catch (error) {
                 console.error('Error fetching results:', error);

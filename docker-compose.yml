@@ -75,6 +75,8 @@ services:
       - --stability.level=experimental # Enable all functionality
     ports:
       - "12345:12345"
+    networks:
+      - voting-app-network
   
 
   mimir:
@@ -86,12 +88,16 @@ services:
       - ./mimir-config.yaml:/etc/mimir-config/mimir-config.yaml
     ports:
       - "8080:8080"
+    networks:
+      - voting-app-network
 
   loki:
     image: grafana/loki:3.0.0
     restart: on-failure
     ports:
       - "3100:3100"
+    networks:
+      - voting-app-network
 
   tempo:
     image: grafana/tempo:2.4.1
@@ -105,12 +111,16 @@ services:
     ports:
       - "3200:3200"
       - "4317:4318"
+    networks:
+      - voting-app-network
 
   pyroscope:
     image: grafana/pyroscope:1.5.0
     restart: on-failure
     ports:
       - "4040:4040"
+    networks:
+      - voting-app-network
 
   grafana:
     image: grafana/grafana:latest
@@ -128,6 +138,27 @@ services:
       - mimir
       - loki
       - tempo
+    networks:
+      - voting-app-network
+
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      - voting-app-network
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
     networks:
       - voting-app-network
 

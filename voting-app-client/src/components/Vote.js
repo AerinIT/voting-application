@@ -14,7 +14,7 @@ const Vote = () => {
 
     useEffect(() => {
         const fetchTopic = async () => {
-            const response = await axios.get(`http://localhost:5000/api/topics/${topic}/vote`);
+            const response = await axios.get(`http://13.49.224.166:5000/api/topics/${topic}/vote`);
             setDescription(response.data.description);
         };
         fetchTopic();
@@ -29,7 +29,7 @@ const Vote = () => {
         setError(''); // Clear previous error if name is valid
 
         try {
-            await axios.post(`http://localhost:5000/api/topics/${topic}/vote`, { vote, name });
+            await axios.post(`http://13.49.224.166:5000/api/topics/${topic}/vote`, { vote, name });
             setMessage('Vote counted!');
             setTimeout(() => {
                 navigate(`/results/${topic}`);

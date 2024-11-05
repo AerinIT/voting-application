@@ -48,7 +48,7 @@ app.post('/api/topics', async (req, res) => {
     await client.hSet('topics', topic, description);
     await client.hSet('votes', topic, JSON.stringify([]));
 
-    const votingUrl = `http://localhost:3001/vote/${topic}`;
+    const votingUrl = `http://13.49.224.166:3001/vote/${topic}`;
     diag.info(`Topic created successfully: ${topic}`);
     res.json({ message: 'Topic created!', votingUrl });
 });
@@ -104,6 +104,6 @@ app.get('/api/topics/:topic/results', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-    diag.info(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://13.49.224.166:${PORT}`);
+    diag.info(`Server running on http://13.49.224.166:${PORT}`);
 });

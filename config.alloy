@@ -37,26 +37,26 @@ prometheus.scrape "alloy" {
 // Collect profiles from the local running Alloy instance and forward to Pyroscope.
 pyroscope.scrape "default" {
 	targets = [
-		{"__address__" = "localhost:12345", "service_name" = "alloy"},
+		{"__address__" = "13.49.224.166:12345", "service_name" = "alloy"},
 	]
 	forward_to = [pyroscope.write.pyroscope.receiver]
 }
 
 prometheus.remote_write "mimir" {
 	endpoint {
-		url = "http://mimir/api/v1/push"
+		url = "http://13.49.224.166:8080"
 	}
 }
 
 loki.write "loki" {
 	endpoint {
-		url = "http://loki/api/v1/push"
+		url = "http://13.49.224.166:3100"
 	}
 }
 
 otelcol.exporter.otlp "tempo" {
 	client {
-		endpoint = "http://tempo:3200"
+		endpoint = "http://13.49.224.166:3200"
 
 		tls {
 			insecure = true
@@ -66,6 +66,7 @@ otelcol.exporter.otlp "tempo" {
 
 pyroscope.write "pyroscope" {
 	endpoint {
-		url = "http://pyroscope:4040"
+		url = "http://13.49.224.166:4040"
 	}
 }
+ 	

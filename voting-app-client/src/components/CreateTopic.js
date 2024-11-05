@@ -14,7 +14,7 @@ const CreateTopic = () => {
     const createTopic = async (e) => {
         e.preventDefault();
         try {
-            const response = await axios.post('http://localhost:5000/api/topics', { topic, description });
+            const response = await axios.post('http://13.49.224.166:5000/api/topics', { topic, description });
             setVotingUrl(response.data.votingUrl);
             setMessage('Topic created! Copy the voting link below.');
         } catch (error) {
