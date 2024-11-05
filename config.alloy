@@ -44,19 +44,19 @@ pyroscope.scrape "default" {
 
 prometheus.remote_write "mimir" {
 	endpoint {
-		url = "http://localhost:9009/api/v1/push"
+		url = "http://mimir/api/v1/push"
 	}
 }
 
 loki.write "loki" {
 	endpoint {
-		url = "http://localhost:3100/loki/api/v1/push"
+		url = "http://loki/api/v1/push"
 	}
 }
 
 otelcol.exporter.otlp "tempo" {
 	client {
-		endpoint = "http://localhost:4317"
+		endpoint = "http://tempo:3200"
 
 		tls {
 			insecure = true
@@ -66,6 +66,6 @@ otelcol.exporter.otlp "tempo" {
 
 pyroscope.write "pyroscope" {
 	endpoint {
-		url = "http://localhost:4040"
+		url = "http://pyroscope:4040"
 	}
 }

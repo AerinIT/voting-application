@@ -11,11 +11,11 @@ const { PeriodicExportingMetricReader } = require('@opentelemetry/sdk-metrics');
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 // Configure the OTLP trace exporter
 const traceExporter = new OTLPTraceExporter({
-  url: 'http://localhost:4318/v1/traces',
+  url: 'http://tempo:4318/v1/traces',
 });
 // Configure the OTLP metric exporter
 const metricExporter = new OTLPMetricExporter({
-  url: 'http://localhost:4318/v1/metrics',
+  url: 'http://tempo:4318/v1/metrics',
 });
 // Create the OpenTelemetry SDK
 const sdk = new NodeSDK({

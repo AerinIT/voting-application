@@ -1,9 +1,9 @@
+require('./tracing');
 const express = require('express');
 const bodyParser = require('body-parser');
 const redis = require('redis');
 const cors = require('cors');
 const { diag, DiagConsoleLogger, DiagLogLevel } = require('@opentelemetry/api');
-require('./tracing');
 
 // Enable diagnostic logs
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);

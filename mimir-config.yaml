@@ -8,7 +8,7 @@ alertmanager_storage:
   backend: local
 
 server:
-  http_listen_port: 9009
+  http_listen_port: 8080
 
   # Configure the server to allow messages up to 100MB.
   grpc_server_max_recv_msg_size: 104857600

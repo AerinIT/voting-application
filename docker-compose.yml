@@ -15,6 +15,7 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - ALLOY_URL=http://alloy:12345
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:3200
     networks:
       - voting-app-network
 
@@ -44,15 +45,11 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./alloy-nginx.conf:/etc/nginx/alloy-nginx.conf
     depends_on:
       - client
       - server
     networks:
       - voting-app-network
-
-
-
 
   alloy:
     image: grafana/alloy:v1.0.0
@@ -61,9 +58,9 @@ services:
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy
     environment:
-      REMOTE_WRITE_HOST: mimir:9009
+      REMOTE_WRITE_HOST: mimir:8080
       LOKI_HOST: loki:3100
-      TEMPO_HOST: tempo:4317
+      TEMPO_HOST: tempo:4318
       PYROSCOPE_HOST: pyroscope:4040
     depends_on:
       - mimir
@@ -88,7 +85,7 @@ services:
     volumes:
       - ./mimir-config.yaml:/etc/mimir-config/mimir-config.yaml
     ports:
-      - "9009:9009"
+      - "8080:8080"
 
   loki:
     image: grafana/loki:3.0.0
@@ -107,7 +104,7 @@ services:
       - "-server.http-listen-port=3200"
     ports:
       - "3200:3200"
-      - "4317:4317"
+      - "4317:4318"
 
   pyroscope:
     image: grafana/pyroscope:1.5.0
@@ -115,30 +112,24 @@ services:
     ports:
       - "4040:4040"
 
-  # alloy:
-  #   image: grafana/alloy:latest
-  #   container_name: alloy
-  #   ports:
-  #     - "12345:12345"
-  #   volumes:
-  #     - ./config.alloy:/etc/alloy/config.alloy
-  #   command:
-  #     - run
-  #     - --server.http.listen-addr=0.0.0.0:12345
-  #     - --storage.path=/var/lib/alloy/data
-  #     - /etc/alloy/config.alloy
-    
-  # loki:
-  #   image: grafana/loki:latest
-  #   container_name: loki
-  #   ports:
-  #   - "3100-3100"
-
-  # tempo:
-  #   image: grafana/tempo:latest
-  #   container_name: tempo
-  #   ports:
-  #     - "3200:3200"
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    command:
+      - --config=/etc/grafana-config/grafana.ini
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana.ini:/etc/grafana-config/grafana.ini
+    depends_on:
+      - mimir
+      - loki
+      - tempo
+    networks:
+      - voting-app-network
 
 networks:
   voting-app-network:
