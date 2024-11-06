@@ -1,0 +1,13 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "influxdb_exporter"
+    static_configs:
+      - targets: ["influxdb_exporter:9122"] # The service name and port for the exporter
+  - job_name: "mimir"
+    static_configs:
+      - targets: ["mimir:8080"]
+  - job_name: "alloy"
+    static_configs:
+      - targets: ["alloy:12345"]
