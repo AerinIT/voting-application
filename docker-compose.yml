@@ -77,6 +77,8 @@ services:
       - --stability.level=experimental # Enable all functionality
     ports:
       - "12345:12345"
+    networks:
+      - voting-app-network
 
   mimir:
     image: grafana/mimir:2.12.0
@@ -87,6 +89,8 @@ services:
       - ./mimir-config.yaml:/etc/mimir-config/mimir-config.yaml
     ports:
       - "8080:8080"
+    networks:
+      - voting-app-network
 
   loki:
     image: grafana/loki:3.0.0
@@ -120,10 +124,13 @@ services:
       - "8081:80" # Graphite web interface
       - "2003-2004:2003-2004" # Graphite Carbon ports
       - "8125:8125/udp" # StatsD UDP port
+      - "8126:8126"
     environment:
       - GRAPHITE_TIME_ZONE=UTC
     volumes:
       - graphite-data:/opt/graphite/storage
+    networks:
+      - voting-app-network
 
   influxdb:
     image: influxdb:latest
@@ -146,6 +153,8 @@ services:
       INFLUXDB_URL: http://influxdb:8086
     depends_on:
       - influxdb
+    networks:
+      - voting-app-network
 
   # prometheus-to-graphite:
   #   image: prom/graphite-exporter
@@ -167,6 +176,8 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml # Prometheus config file
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      - voting-app-network
 
   grafana:
     image: grafana/grafana:latest
@@ -184,6 +195,8 @@ services:
       - mimir
       - loki
       - tempo
+      - graphite
+      - prometheus
     networks:
       - voting-app-network
 
