@@ -1,102 +1,41 @@
 logging {
-	level = "debug"
-	write_to = [loki.relabel.alloy_logs.receiver]
-}
-
-loki.relabel "alloy_logs" {
-	rule {
-		target_label = "instance"
-		replacement = constants.hostname
-	}
-
-	rule {
-		target_label = "job"
-		replacement = "integrations/self"
-	}
-
-	forward_to = [loki.write.loki.receiver]
-}
-
-tracing {
-	sampling_fraction = 1.0
-
-	write_to = [otelcol.exporter.otlp.tempo.input]
-}
-
-
-prometheus.exporter.self "alloy" {}
-prometheus.scrape "alloy" {
-	targets    = prometheus.exporter.self.alloy.targets
-	forward_to = [prometheus.remote_write.mimir.receiver]
-}
-
-
-pyroscope.scrape "default" {
-	targets = [
-		{"__address__" = "localhost:12345", "service_name" = "alloy"},
-	]
-	forward_to = [pyroscope.write.pyroscope.receiver]
-}
-
-prometheus.remote_write "mimir" {
-	endpoint {
-		url = "http://mimir:8080/api/v1/push"
-	}
+  level = "debug"
+  format = "json"
+  write_to = [loki.write.loki.receiver]
 }
 
 loki.write "loki" {
-	endpoint {
-		url = "http://loki:3100/api/v1/push"
-	}
+  endpoint {
+    url = "http://loki:3100/api/v1/push"
+  }
+}
+
+tracing {
+  sampling_fraction = 0.1
+  write_to = [otelcol.exporter.otlp.tempo.input]
 }
 
 otelcol.exporter.otlp "tempo" {
-	client {
-		endpoint = "http://tempo:3200"
-
-		tls {
-			insecure = true
-		}
-	}
-}
-
-pyroscope.write "pyroscope" {
-	endpoint {
-		url = "http://pyroscope:4040"
-	}
-}
-
-otelcol.receiver.otlp "default" {
-  http {}
-  output {
-    metrics = [otelcol.processor.batch.default.input]
-    traces  = [otelcol.processor.batch.default.input]
-    logs    = [otelcol.processor.batch.default.input]
-  }
-}
-
-otelcol.processor.batch "default" {
-  output {
-    metrics = [otelcol.exporter.otlphttp.mimir.input]
-    traces  = [otelcol.exporter.otlphttp.tempo.input]
-    logs    = [otelcol.exporter.otlphttp.loki.input]
-  }
-}
-
-otelcol.exporter.otlphttp "mimir" {
   client {
-    endpoint = "http://mimir:8080/api/v1/push"
+    endpoint = "tempo:4317"
   }
 }
 
-otelcol.exporter.otlphttp "tempo" {
-  client {
-    endpoint = "http://tempo:3200"
-  }
+prometheus.scrape "app_server" {
+  targets = [
+    {
+      __address__ = "server:5000",
+    },
+  ]
+  forward_to     = [prometheus.remote_write.mimir.receiver]
+  job_name       = "app-server"
+  scrape_timeout = "60s"
 }
 
-otelcol.exporter.otlphttp "loki" {
-  client {
-    endpoint = "http://loki:3100/api/v1/push"
+
+prometheus.remote_write "mimir" {
+  endpoint {
+    name = "grafana-mimir"
+    url  = "http://mimir:9009/api/v1/push"
   }
 }

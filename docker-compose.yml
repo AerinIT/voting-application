@@ -15,7 +15,6 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - ALLOY_URL=http://alloy:12345
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://tempo:3200
     networks:
       - voting-app-network
 
@@ -53,26 +52,25 @@ services:
 
   alloy:
     image: grafana/alloy:v1.0.0
+    container_name: alloy
     pull_policy: always
     restart: on-failure
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy
     environment:
-      REMOTE_WRITE_HOST: mimir:9090
+      REMOTE_WRITE_HOST: mimir:9009
       LOKI_HOST: loki:3100
-      TEMPO_HOST: tempo:4318
-      # PYROSCOPE_HOST: pyroscope:4040
+      TEMPO_HOST: tempo:3200
     depends_on:
       - mimir
       - loki
       - tempo
-      # - pyroscope
     command:
       - run
       - /etc/alloy/config.alloy
       - --storage.path=/var/lib/alloy/data
       - --server.http.listen-addr=0.0.0.0:12345
-      - --stability.level=experimental # Enable all functionality
+      - --stability.level=experimental
     ports:
       - "12345:12345"
     networks:
@@ -101,14 +99,10 @@ services:
 
   mimir:
     image: grafana/mimir:2.12.0
-    container_name: grafana
+    container_name: mimir
     restart: on-failure
-    command:
-      - -config.file=/etc/mimir-config/mimir-config.yaml
-    volumes:
-      - ./mimir-config.yaml:/etc/mimir-config/mimir-config.yaml
     ports:
-      - "8080:8080"
+      - "9009:9009"
     networks:
       - voting-app-network
 
@@ -118,8 +112,6 @@ services:
     restart: on-failure
     ports:
       - "3100:3100"
-    volumes:
-      - ./loki-config.yaml:/etc/grafana-config/loki-config.yaml
     networks:
       - voting-app-network
 
@@ -135,67 +127,9 @@ services:
       - "-server.http-listen-port=3200"
     ports:
       - "3200:3200"
-      - "4318:4318"
+      - "4317:4317"
     networks:
       - voting-app-network
-
-
-  # pyroscope:
-  #   image: grafana/pyroscope:1.5.0
-  #   restart: on-failure
-  #   ports:
-  #     - "4040:4040"
-  #   networks:
-  #     - voting-app-network
-
-
-  # graphite:
-  #   image: graphiteapp/graphite-statsd:latest
-  #   container_name: graphite
-  #   ports:
-  #     - "8081:80"       # Graphite web interface
-  #     - "2003-2004:2003-2004"  # Graphite Carbon ports
-  #     - "8125:8125/udp"  # StatsD UDP port
-  #   environment:
-  #     - GRAPHITE_TIME_ZONE=UTC
-  #   volumes:
-  #     - graphite-data:/opt/graphite/storage
-  #   networks:
-  #     - voting-app-network
-
-  # otel-collector:
-  #   image: otel/opentelemetry-collector-contrib:latest
-  #   container_name: otel-collector
-  #   command:
-  #     - "--config=/etc/otelcol/otel.yaml"
-  #   volumes:
-  #     - ./otel.yaml:/etc/otelcol/otel.yaml  # Mount your OTEL Collector config file
-  #   ports:
-  #     - "4317:4317"  # OTLP (Traces and Metrics) - default
-  #     - "55680:55680"  # gRPC endpoint for OTLP
-  #   networks:
-  #     - voting-app-network
-
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   container_name: prometheus
-  #   ports:
-  #     - "9090:9090"
-  #   volumes:
-  #     - ./prometheus.yaml:/etc/prometheus/prometheus.yaml
-  #   command:
-  #     - "--config.file=/etc/prometheus/prometheus.yaml"
-  #   networks:
-  #     - voting-app-network
-
-  # promtail:
-  #   image: grafana/promtail:latest
-  #   container_name: promtail
-  #   volumes:
-  #     - ./promtail.yaml:/etc/promtail/promtail.yaml
-  #   command: -config.file=/etc/promtail/promtail.yaml
-  #   networks:
-  #     - voting-app-network
 
 networks:
   voting-app-network:
@@ -204,5 +138,4 @@ networks:
 volumes:
   server-data:
   client-data:
-  # graphite-data:
   grafana-data:
