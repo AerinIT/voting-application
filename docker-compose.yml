@@ -58,9 +58,9 @@ services:
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy
     environment:
-      REMOTE_WRITE_HOST: mimir:9009
-      LOKI_HOST: loki:3100
-      TEMPO_HOST: tempo:3200
+      REMOTE_WRITE_HOST: http://mimir:9009
+      LOKI_HOST: http://loki:3100
+      TEMPO_HOST: http://tempo:3200
     depends_on:
       - mimir
       - loki
@@ -98,9 +98,13 @@ services:
       - voting-app-network
 
   mimir:
-    image: grafana/mimir:2.12.0
+    image: grafana/mimir:latest
     container_name: mimir
     restart: on-failure
+    volumes:
+      - ./mimir-config.yaml:/etc/mimir/mimir.yaml
+    command:
+      - --config.file=/etc/mimir/mimir.yaml
     ports:
       - "9009:9009"
     networks:
@@ -110,6 +114,8 @@ services:
     image: grafana/loki:3.0.0
     container_name: loki
     restart: on-failure
+    volumes:
+      - ./loki-config.yaml:/etc/loki/loki.yaml
     ports:
       - "3100:3100"
     networks:

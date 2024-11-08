@@ -1,13 +1,26 @@
 logging {
-  level = "debug"
-  format = "json"
-  write_to = [loki.write.loki.receiver]
+	level = "debug"
+	write_to = [loki.relabel.alloy_logs.receiver]
+}
+
+loki.relabel "alloy_logs" {
+	rule {
+		target_label = "instance"
+		replacement = constants.hostname
+	}
+
+	rule {
+		target_label = "job"
+		replacement = "integrations/self"
+	}
+
+	forward_to = [loki.write.loki.receiver]
 }
 
 loki.write "loki" {
-  endpoint {
-    url = "http://loki:3100/api/v1/push"
-  }
+	endpoint {
+		url = "http://loki:3100/api/v1/push"
+	}
 }
 
 tracing {
