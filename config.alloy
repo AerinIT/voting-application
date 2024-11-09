@@ -1,36 +1,21 @@
-logging {
-	level = "debug"
-	write_to = [loki.relabel.alloy_logs.receiver]
+otelcol.receiver.otlp "loki" {
+  http {}
+  grpc {}
+
+  output {
+    logs    = [otelcol.processor.batch.loki.input]
+  }
 }
 
-loki.relabel "alloy_logs" {
-	rule {
-		target_label = "instance"
-		replacement = constants.hostname
-	}
-
-	rule {
-		target_label = "job"
-		replacement = "integrations/self"
-	}
-
-	forward_to = [loki.write.loki.receiver]
+otelcol.processor.batch "loki" {
+  output {
+    logs    = [otelcol.exporter.otlphttp.loki.input]
+  }
 }
 
-loki.write "loki" {
-	endpoint {
-		url = "http://loki:3100/api/v1/push"
-	}
-}
-
-tracing {
-  sampling_fraction = 0.1
-  write_to = [otelcol.exporter.otlp.tempo.input]
-}
-
-otelcol.exporter.otlp "tempo" {
+otelcol.exporter.otlphttp "loki" {
   client {
-    endpoint = "tempo:4317"
+    endpoint = "http://loki:3100/api/v1/push"
   }
 }
 

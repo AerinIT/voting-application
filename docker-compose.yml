@@ -53,10 +53,14 @@ services:
   alloy:
     image: grafana/alloy:v1.0.0
     container_name: alloy
+    ports:
+      - 12345:12345
+      - 4317:4317
     pull_policy: always
     restart: on-failure
     volumes:
       - ./config.alloy:/etc/alloy/config.alloy
+      - ./logs:/tmp/app-logs/
     environment:
       REMOTE_WRITE_HOST: http://mimir:9009
       LOKI_HOST: http://loki:3100
@@ -71,8 +75,6 @@ services:
       - --storage.path=/var/lib/alloy/data
       - --server.http.listen-addr=0.0.0.0:12345
       - --stability.level=experimental
-    ports:
-      - "12345:12345"
     networks:
       - voting-app-network
 
@@ -87,8 +89,7 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
-      - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/:/etc/grafana/provisioning
       - ./grafana.ini:/etc/grafana-config/grafana.ini
     depends_on:
       - mimir
@@ -133,7 +134,6 @@ services:
       - "-server.http-listen-port=3200"
     ports:
       - "3200:3200"
-      - "4317:4317"
     networks:
       - voting-app-network
 
@@ -144,4 +144,3 @@ networks:
 volumes:
   server-data:
   client-data:
-  grafana-data:
