@@ -1,23 +1,35 @@
-otelcol.receiver.otlp "loki" {
+// OTLP Receiver
+otelcol.receiver.otlp "default" {
   http {}
   grpc {}
 
   output {
-    logs    = [otelcol.processor.batch.loki.input]
+    logs = [otelcol.exporter.loki.default.input, otelcol.exporter.logging.debug_logs.input]
   }
 }
 
+// Batch Processor for Loki
 otelcol.processor.batch "loki" {
   output {
-    logs    = [otelcol.exporter.otlphttp.loki.input]
+    logs = [otelcol.exporter.loki.default.input, otelcol.exporter.logging.debug_logs.input]
   }
 }
 
-otelcol.exporter.otlphttp "loki" {
-  client {
-    endpoint = "http://loki:3100/api/v1/push"
+// Loki Exporter
+otelcol.exporter.loki "default" {
+  forward_to = [loki.write.local.receiver]
+}
+
+// Loki Write Configuration
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100"
   }
 }
+
+// Logging Exporter for Debugging
+otelcol.exporter.logging "debug_logs" {}
+
 
 prometheus.scrape "app_server" {
   targets = [
