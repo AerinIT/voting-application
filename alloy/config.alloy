@@ -43,17 +43,6 @@ otelcol.exporter.otlp "tempo" {
   }
 }
 
-prometheus.scrape "cadvisor_metrics" {
-  targets = [
-    {
-      __address__ = "cadvisor:8080",
-    },
-  ]
-  forward_to     = [prometheus.remote_write.mimir.receiver]
-  job_name       = "cadvisor"
-  scrape_timeout = "60s"
-}
-
 prometheus.scrape "app_server" {
   targets = [
     {

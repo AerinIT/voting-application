@@ -102,21 +102,7 @@ services:
       - "9009:9009"
     networks:
       - voting-app-network
-  
-  cadvisor:
-    image: google/cadvisor:latest
-    container_name: cadvisor
-    ports:
-      - "8080:8080"
-    volumes:
-      - /:/rootfs:ro
-      - /var/run:/var/run:ro
-      - /sys:/sys:ro
-      - /var/lib/docker/:/var/lib/docker:ro
-    networks:
-      - voting-app-network
-  
-  
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -131,40 +117,45 @@ services:
       - grafana-data:/var/lib/grafana
       - ./grafana/:/etc/grafana/provisioning
       - ./grafana/grafana.ini:/etc/grafana-config/grafana.ini
+    user: "1000:1000"
     depends_on:
       - mimir
       - loki
       - tempo
     networks:
       - voting-app-network
-  
-  graphite:
-    image: graphiteapp/graphite-statsd:latest
-    container_name: graphite
-    ports:
-      - "8081:80" 
-      - "2003-2004:2003-2004"
-      - "8125:8125/udp" 
+
+  influxdb:
+    image: influxdb
+    container_name: influxdb
     environment:
-      - GRAPHITE_TIME_ZONE=UTC
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=password
+      - INFLUXDB_HTTP_AUTH_ENABLED=false
+      - DOCKER_INFLUXDB_INIT_BUCKET=mybucket
+    ports:
+      - "8086:8086"
     volumes:
-      - graphite-data:/opt/graphite/storage
+      - influxdb-data:/var/lib/influxdb2
     networks:
       - voting-app-network
 
-  influxdb:
-    image: influxdb:latest
-    container_name: influxdb
+  cadvisor:
+    image: google/cadvisor:latest
+    container_name: cadvisor
     ports:
-      - "8086:8086" 
+      - "8080:8080"
+    command: -logtostderr -docker_only -storage_driver=influxdb -storage_driver_db=cadvisor -storage_driver_host=influxdb:8086
     volumes:
-      - influxdb-data:/var/lib/influxdb
-    environment:
-      INFLUXDB_DB: mydb 
-      INFLUXDB_ADMIN_USER: "admin"
-      INFLUXDB_ADMIN_PASSWORD: "password"
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    depends_on:
+      - influxdb
     networks:
       - voting-app-network
+
 
 networks:
   voting-app-network:
@@ -174,5 +165,4 @@ volumes:
   server-data:
   client-data:
   grafana-data:
-  graphite-data:
   influxdb-data:

@@ -9,14 +9,12 @@ datasources:
   - name: Loki
     type: loki
     url: http://loki:3100
-    isDefault: true
+    access: proxy
 
   - name: Tempo
     type: tempo
     url: http://tempo:3200
     access: proxy
-
-
 
 
 
