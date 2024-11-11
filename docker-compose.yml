@@ -45,6 +45,82 @@ services:
       - server
     networks:
       - voting-app-network
+  
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+    ports:
+      - "12345:12345"
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - --server.http.listen-addr=0.0.0.0:12345
+    depends_on:
+      - loki
+      - tempo
+      - mimir
+    networks:
+      - voting-app-network
+
+  loki:
+    image: grafana/loki:3.0.0
+    restart: on-failure
+    ports:
+      - "3100:3100"
+    networks:
+      - voting-app-network
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    restart: on-failure
+    command:
+      - "-storage.trace.backend=local"
+      - "-storage.trace.local.path=/tmp/tempo/traces"
+      - "-storage.trace.wal.path=/tmp/tempo/wal"
+      - "-auth.enabled=false"
+      - "-server.http-listen-port=3200"
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+    networks:
+      - voting-app-network
+
+  mimir:
+    image: grafana/mimir:latest
+    container_name: mimir
+    ports:
+      - "9009:9009"
+    volumes:
+      - ./mimir/mimir-config.yaml:/etc/mimir/mimir.yaml
+    command:
+      - --config.file=/etc/mimir/mimir.yaml
+    networks:
+      - voting-app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    command:
+      - --config=/etc/grafana-config/grafana.ini
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/:/etc/grafana/provisioning
+      - ./grafana/grafana.ini:/etc/grafana-config/grafana.ini
+    depends_on:
+      - mimir
+      - loki
+      - tempo
+    networks:
+      - voting-app-network
 
 networks:
   voting-app-network:
@@ -53,3 +129,4 @@ networks:
 volumes:
   server-data:
   client-data:
+  grafana-data:
