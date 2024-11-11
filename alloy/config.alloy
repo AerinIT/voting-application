@@ -1,0 +1,85 @@
+logging {
+  level = "debug"
+
+  // Forward internal logs to the local Loki instance.
+  write_to = [loki.relabel.alloy_logs.receiver]
+}
+
+loki.relabel "alloy_logs" {
+  rule {
+    target_label = "instance"
+    replacement = constants.hostname
+  }
+
+  rule {
+    target_label = "job"
+    replacement = "integrations/self"
+  }
+
+  forward_to = [loki.write.loki.receiver]
+}
+
+loki.write "loki" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
+
+tracing {
+  // Write all spans. Don't do this in production!
+  sampling_fraction = 1.0
+
+  // Forward internal spans to the local Tempo instance.
+  write_to = [otelcol.exporter.otlp.tempo.input]
+}
+
+otelcol.exporter.otlp "tempo" {
+  client {
+    endpoint = "http://tempo:3200"
+
+    tls {
+      insecure = true
+    }
+  }
+}
+
+prometheus.scrape "cadvisor_metrics" {
+  targets = [
+    {
+      __address__ = "cadvisor:8080",
+    },
+  ]
+  forward_to     = [prometheus.remote_write.mimir.receiver]
+  job_name       = "cadvisor"
+  scrape_timeout = "60s"
+}
+
+prometheus.scrape "app_server" {
+  targets = [
+    {
+      __address__ = "server:5000",
+    },
+  ]
+  forward_to     = [prometheus.remote_write.mimir.receiver]
+  job_name       = "app-server"
+  scrape_timeout = "60s"
+}
+
+prometheus.scrape "influxdb_exporter" {
+  targets = [
+    {
+      __address__ = "influxdb_exporter:9122",
+    },
+  ]
+  forward_to     = [prometheus.remote_write.mimir.receiver]
+  job_name       = "influxdb-exporter"
+  scrape_timeout = "60s"
+}
+
+prometheus.remote_write "mimir" {
+  endpoint {
+    name = "grafana-mimir"
+    url  = "http://mimir:9009/api/v1/push"
+  }
+}
+

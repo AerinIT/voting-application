@@ -46,6 +46,126 @@ services:
     networks:
       - voting-app-network
 
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - ./alloy/config.alloy:/etc/alloy/config.alloy
+    environment:
+      LOKI_HOST: http://localhost:3100
+    command:
+      - run
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+      - /etc/alloy/config.alloy
+    depends_on:
+      - loki
+      - tempo
+      - mimir
+    networks:
+      - voting-app-network
+  
+  loki:
+    image: grafana/loki:3.0.0
+    restart: on-failure
+    ports:
+      - "3100:3100"
+    networks:
+      - voting-app-network 
+
+  tempo:
+    image: grafana/tempo:2.4.1
+    restart: on-failure
+    command:
+      - "-storage.trace.backend=local"
+      - "-storage.trace.local.path=/tmp/tempo/traces"
+      - "-storage.trace.wal.path=/tmp/tempo/wal"
+      - "-auth.enabled=false"
+      - "-server.http-listen-port=3200"
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+    networks:
+      - voting-app-network
+
+  mimir:
+    image: grafana/mimir:latest
+    container_name: mimir
+    restart: on-failure
+    volumes:
+      - ./mimir/mimir-config.yaml:/etc/mimir/mimir.yaml
+    command:
+      - --config.file=/etc/mimir/mimir.yaml
+    ports:
+      - "9009:9009"
+    networks:
+      - voting-app-network
+  
+  cadvisor:
+    image: google/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - voting-app-network
+  
+  
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    command:
+      - --config=/etc/grafana-config/grafana.ini
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/:/etc/grafana/provisioning
+      - ./grafana/grafana.ini:/etc/grafana-config/grafana.ini
+    depends_on:
+      - mimir
+      - loki
+      - tempo
+    networks:
+      - voting-app-network
+  
+  graphite:
+    image: graphiteapp/graphite-statsd:latest
+    container_name: graphite
+    ports:
+      - "8081:80" 
+      - "2003-2004:2003-2004"
+      - "8125:8125/udp" 
+    environment:
+      - GRAPHITE_TIME_ZONE=UTC
+    volumes:
+      - graphite-data:/opt/graphite/storage
+    networks:
+      - voting-app-network
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    ports:
+      - "8086:8086" 
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    environment:
+      INFLUXDB_DB: mydb 
+      INFLUXDB_ADMIN_USER: "admin"
+      INFLUXDB_ADMIN_PASSWORD: "password"
+    networks:
+      - voting-app-network
+
 networks:
   voting-app-network:
     driver: bridge
@@ -53,3 +173,6 @@ networks:
 volumes:
   server-data:
   client-data:
+  grafana-data:
+  graphite-data:
+  influxdb-data:
