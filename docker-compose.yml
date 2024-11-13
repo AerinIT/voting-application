@@ -11,6 +11,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:12345
     networks:
       - voting-app-network
 
@@ -129,4 +130,5 @@ networks:
 volumes:
   server-data:
   client-data:
+  # tempo-data:
   grafana-data:

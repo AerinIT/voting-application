@@ -1,44 +1,70 @@
 logging {
-	level = "debug"
-
-	// Forward internal logs to the local Loki instance.
-	write_to = [loki.relabel.alloy_logs.receiver]
+  level = "info"
+  format = "logfmt"
 }
 
-loki.relabel "alloy_logs" {
-	rule {
-		target_label = "instance"
-		replacement = constants.hostname
-	}
-
-	rule {
-		target_label = "job"
-		replacement = "integrations/self"
-	}
-
-	forward_to = [loki.write.loki.receiver]
+local.file_match "tmplogs" {
+    path_targets = [{"__path__" = "/tmp/alloy-logs/*.log"}]
 }
 
-loki.write "loki" {
-	endpoint {
-		url = "http://loki:3100/loki/api/v1/push"
-	}
+loki.source.file "local_files" {
+    targets    = local.file_match.tmplogs.targets
+    forward_to = [loki.process.alloy.receiver]
 }
 
-tracing {
-	sampling_fraction = 1.0
+loki.process "alloy" {
+    stage.logfmt {
+        mapping = {
+            "extracted_level" = "level",
+            "extracted_msg" = "msg",
+        }
+    }
 
-	write_to = [otelcol.exporter.otlp.tempo.input]
+    stage.labels {
+        values = {
+            "level" = "extracted_level",
+            "msg" = "extracted_msg",
+        }
+    }
+
+    forward_to = [loki.relabel.add_static_label.receiver]
 }
 
-otelcol.exporter.otlp "tempo" {
-	client {
-		endpoint = "http://localhost:3200"
+loki.relabel "add_static_label" {
+    forward_to = [loki.write.local_loki.receiver]
 
-		tls {
-			insecure = true
-		}
-	}
+    rule {
+        target_label = "os"
+        replacement  = constants.os
+    }
+}
+
+loki.write "local_loki" {
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+    }
+}
+
+
+
+
+otelcol.receiver.otlp "otlp_receiver" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.exporter.otlp.primesis_grafana.input]
+  }
+}
+
+otelcol.exporter.otlp "primesis_grafana" {
+  client {
+    endpoint = "http://tempo:3200/api/v1/push"
+  }
 }
 
 prometheus.scrape "app_server" {
