@@ -67,25 +67,21 @@ services:
       - voting-app-network
 
   loki:
-    image: grafana/loki:3.0.0
-    restart: on-failure
+    image: grafana/loki:main
     ports:
       - "3100:3100"
-    networks:
-      - voting-app-network
+    volumes:
+      - ./loki/loki.yaml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
 
   tempo:
     image: grafana/tempo:2.4.1
     restart: on-failure
-    command:
-      - "-storage.trace.backend=local"
-      - "-storage.trace.local.path=/tmp/tempo/traces"
-      - "-storage.trace.wal.path=/tmp/tempo/wal"
-      - "-auth.enabled=false"
-      - "-server.http-listen-port=3200"
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo/tempo.yaml:/etc/tempo.yaml
     ports:
-      - "3200:3200"
-      - "4317:4317"
+      - "3200:3100"
     networks:
       - voting-app-network
 
@@ -111,6 +107,9 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_BASIC_ENABLED=false
+      - GF_INSTALL_PLUGINS=https://storage.googleapis.com/integration-artifacts/grafana-lokiexplore-app/grafana-lokiexplore-app-latest.zip;grafana-lokiexplore-app
+      - GF_FEATURE_TOGGLES_ENABLE=accessControlOnCall
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/:/etc/grafana/provisioning

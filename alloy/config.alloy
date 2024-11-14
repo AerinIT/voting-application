@@ -1,44 +1,58 @@
-logging {
-	level = "debug"
-
-	// Forward internal logs to the local Loki instance.
-	write_to = [loki.relabel.alloy_logs.receiver]
+local.file_match "applogs" {
+    path_targets = [{"__path__" = "/tmp/app-logs/app.log"}]
+    sync_period = "5s"
 }
 
-loki.relabel "alloy_logs" {
-	rule {
-		target_label = "instance"
-		replacement = constants.hostname
-	}
-
-	rule {
-		target_label = "job"
-		replacement = "integrations/self"
-	}
-
-	forward_to = [loki.write.loki.receiver]
+loki.write "local_loki" {
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+    }
 }
 
-loki.write "loki" {
-	endpoint {
-		url = "http://loki:3100/loki/api/v1/push"
-	}
+loki.source.file "local_files" {
+    targets    = local.file_match.applogs.targets
+    forward_to = [loki.process.add_new_label.receiver]
 }
 
-tracing {
-	sampling_fraction = 1.0
 
-	write_to = [otelcol.exporter.otlp.tempo.input]
+loki.process "add_new_label" {
+    stage.logfmt {
+        mapping = {
+            "extracted_level" = "level",
+            "extracted_logger" = "logger",
+        }
+    }
+
+    stage.labels {
+        values = {
+            "level" = "extracted_level",
+            "logger" = "extracted_logger",
+        }
+    }
+     forward_to = [loki.write.local_loki.receiver]
 }
 
-otelcol.exporter.otlp "tempo" {
-	client {
-		endpoint = "http://localhost:3200"
 
-		tls {
+otelcol.receiver.otlp "otlp_receiver" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces = [otelcol.exporter.otlp.grafanacloud.input,]
+  }
+}
+
+otelcol.exporter.otlp "grafanacloud" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
 			insecure = true
 		}
-	}
+  }
 }
 
 prometheus.scrape "app_server" {
