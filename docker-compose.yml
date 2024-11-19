@@ -169,6 +169,18 @@ services:
     networks:
       - voting-app-network
 
+  # synthetic-monitor-agent:
+  #   image: grafana/synthetic-monitoring-agent:latest
+  #   container_name: synthetic-monitor-agent
+  #   restart: unless-stopped
+  #   environment:
+  #     - API_SERVER=https://synthetic-monitoring-grpc-ap-south-1.grafana.net:443
+  #     - API_TOKEN=7ZWfVHhoxWotn9xSjdDVFfiam3plBCGio7u88jO+0aHdKo6DghwuxKmNeksJMVugAcameEcYtj7DpENZUvbDw93smrK/nPajzcgGOYZ7G+zRVjHJbo9XrxvSPjlh9CH795K5UbfYOJVzYtFaFdsLk5qzXFX3yBt/bJsQ4NFCHdc=
+  #   networks:
+  #     - voting-app-network
+  #   depends_on:
+  #     - client
+
 networks:
   voting-app-network:
     driver: bridge

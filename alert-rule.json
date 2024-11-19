@@ -1,0 +1,58 @@
+{
+    "title": "CPU Usage Alert",
+    "ruleGroup": "CPU Alerts",
+    "folderUID": "be3wbqi8b36rka",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "queryType": "flux",
+        "datasourceUid": "ce3srhr3jqccge",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "query": "from(bucket: \"metrics\") |> range(start: v.timeRangeStart, stop: v.timeRangeStop) |> filter(fn: (r) => r[\"cpu\"] == \"cpu0\") |> filter(fn: (r) => r[\"_field\"] == \"usage_total\") |> filter(fn: (r) => r[\"_measurement\"] == \"docker_container_cpu\") |> filter(fn: (r) => r[\"com.docker.compose.config-hash\"] == \"47af77996496d88048bea3274c677e7037dad4e1f81133cfd0bf4bdd18d60403\") |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false) |> yield(name: \"last\")"
+        }
+      },
+      {
+        "refId": "B",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "-100",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [80],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "type": "classic_conditions"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "annotations": {
+      "summary": "CPU usage has exceeded 80%"
+    }
+  }
+  
