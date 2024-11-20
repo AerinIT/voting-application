@@ -1,51 +1,31 @@
-logging {
-  level = "info"
-  format = "logfmt"
+local.file_match "local_files" {
+    path_targets = [{"__path__" = "/var/log/*.log"}]
+    sync_period = "5s"
 }
 
-local.file_match "tmplogs" {
-    path_targets = [{"__path__" = "/tmp/alloy-logs/*.log"}]
+// Scrape the log files
+loki.source.file "log_scrape" {
+    targets    = local.file_match.local_files.targets
+    forward_to = [loki.process.filter_logs.receiver]
+    tail_from_end = true
 }
 
-loki.source.file "local_files" {
-    targets    = local.file_match.tmplogs.targets
-    forward_to = [loki.process.alloy.receiver]
-}
-
-loki.process "alloy" {
-    stage.logfmt {
-        mapping = {
-            "extracted_level" = "level",
-            "extracted_msg" = "msg",
-        }
+// Process and filter logs
+loki.process "filter_logs" {
+    stage.drop {
+        source = ""
+        expression  = ".*Connection closed by authenticating user root"
+        drop_counter_reason = "noisy"
     }
-
-    stage.labels {
-        values = {
-            "level" = "extracted_level",
-            "msg" = "extracted_msg",
-        }
-    }
-
-    forward_to = [loki.relabel.add_static_label.receiver]
+    forward_to = [loki.write.grafana_loki.receiver]
 }
 
-loki.relabel "add_static_label" {
-    forward_to = [loki.write.local_loki.receiver]
-
-    rule {
-        target_label = "os"
-        replacement  = constants.os
-    }
-}
-
-loki.write "local_loki" {
+// Send logs to Loki
+loki.write "grafana_loki" {
     endpoint {
-        url = "http://loki:3100/loki/api/v1/push"
+        url = "http://localhost:3100/loki/api/v1/push"
     }
 }
-
-
 
 
 otelcol.receiver.otlp "otlp_receiver" {
@@ -57,20 +37,24 @@ otelcol.receiver.otlp "otlp_receiver" {
   }
 
   output {
-    traces = [otelcol.exporter.otlp.primesis_grafana.input]
+    traces = [otelcol.exporter.otlp.grafanacloud.input,]
   }
 }
 
-otelcol.exporter.otlp "primesis_grafana" {
+otelcol.exporter.otlp "grafanacloud" {
   client {
-    endpoint = "http://tempo:3200/api/v1/push"
+    endpoint = "tempo:4317"
+    tls {
+			insecure = true
+		}
   }
 }
+
 
 prometheus.scrape "app_server" {
   targets = [
     {
-      __address__ = "server:5000",
+      __address__ = "server:9464",
     },
   ]
   forward_to     = [prometheus.remote_write.mimir.receiver]

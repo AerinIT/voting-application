@@ -1,4 +1,4 @@
-version: '3'
+version: '3.9'
 services:
   server:
     build:
@@ -6,12 +6,16 @@ services:
     container_name: voting-app-server
     ports:
       - "5000:5000"
+      - "9464:9464"
     volumes:
       - server-data:/app/data
     environment:
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://alloy:12345
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://alloy:12345
+    depends_on:
+      - redis
+      - alloy
     networks:
       - voting-app-network
 
@@ -23,11 +27,13 @@ services:
       - "3001:3001"
     volumes:
       - client-data:/usr/share/nginx/html
+    depends_on:
+      - server
     networks:
       - voting-app-network
 
   redis:
-    image: "redis:alpine"
+    image: redis:alpine
     container_name: voting-app-redis
     ports:
       - "6379:6379"
@@ -46,7 +52,7 @@ services:
       - server
     networks:
       - voting-app-network
-  
+
   alloy:
     image: grafana/alloy:latest
     container_name: alloy
@@ -57,9 +63,6 @@ services:
     command:
       - run
       - /etc/alloy/config.alloy
-      - --server.http.listen-addr=0.0.0.0:12345
-      - --storage.path=/var/lib/alloy/data
-      - --server.http.listen-addr=0.0.0.0:12345
     depends_on:
       - loki
       - tempo
@@ -68,15 +71,20 @@ services:
       - voting-app-network
 
   loki:
-    image: grafana/loki:3.0.0
-    restart: on-failure
+    image: grafana/loki:2.8.2
+    container_name: loki
     ports:
       - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
+    command: 
+      - --config.file=/etc/loki/local-config.yaml
     networks:
       - voting-app-network
 
   tempo:
     image: grafana/tempo:2.4.1
+    container_name: tempo
     restart: on-failure
     command:
       - "-storage.trace.backend=local"
@@ -86,7 +94,8 @@ services:
       - "-server.http-listen-port=3200"
     ports:
       - "3200:3200"
-      - "4317:4317"
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
     networks:
       - voting-app-network
 
@@ -107,15 +116,13 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
-    command:
-      - --config=/etc/grafana-config/grafana.ini
     environment:
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/:/etc/grafana/provisioning
-      - ./grafana/grafana.ini:/etc/grafana-config/grafana.ini
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini
     depends_on:
       - mimir
       - loki
@@ -130,5 +137,4 @@ networks:
 volumes:
   server-data:
   client-data:
-  # tempo-data:
   grafana-data:
