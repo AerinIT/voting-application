@@ -113,10 +113,12 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-synthetic-monitoring-app
     volumes:
       - grafana-data:/var/lib/grafana
       - ./grafana/:/etc/grafana/provisioning
       - ./grafana/grafana.ini:/etc/grafana-config/grafana.ini
+      - ./synthetic-monitoring.yaml:/etc/grafana/provisioning/plugins/synthetic-monitoring.yaml
     user: "1000:1000"
     depends_on:
       - mimir
@@ -168,18 +170,6 @@ services:
       - "8125:8125"
     networks:
       - voting-app-network
-
-  # synthetic-monitor-agent:
-  #   image: grafana/synthetic-monitoring-agent:latest
-  #   container_name: synthetic-monitor-agent
-  #   restart: unless-stopped
-  #   environment:
-  #     - API_SERVER=https://synthetic-monitoring-grpc-ap-south-1.grafana.net:443
-  #     - API_TOKEN=7ZWfVHhoxWotn9xSjdDVFfiam3plBCGio7u88jO+0aHdKo6DghwuxKmNeksJMVugAcameEcYtj7DpENZUvbDw93smrK/nPajzcgGOYZ7G+zRVjHJbo9XrxvSPjlh9CH795K5UbfYOJVzYtFaFdsLk5qzXFX3yBt/bJsQ4NFCHdc=
-  #   networks:
-  #     - voting-app-network
-  #   depends_on:
-  #     - client
 
 networks:
   voting-app-network:
