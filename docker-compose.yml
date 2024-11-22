@@ -60,9 +60,13 @@ services:
       - ./alloy/config.alloy:/etc/alloy/config.alloy
     ports:
       - "12345:12345"
+      - "4318:4318"
+      - "4317:4317"
     command:
       - run
       - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
     depends_on:
       - loki
       - tempo
@@ -93,11 +97,13 @@ services:
       - "-auth.enabled=false"
       - "-server.http-listen-port=3200"
     ports:
-      - "3200:3200"
-      - "4317:4317"  # OTLP gRPC
-      - "4318:4318"  # OTLP HTTP
+      - "3200:3200"  
+      - "9095:9095" 
     networks:
       - voting-app-network
+    volumes:
+      - /tmp/tempo/traces:/tmp/tempo/traces 
+      - /tmp/tempo/wal:/tmp/tempo/wal 
 
   mimir:
     image: grafana/mimir:latest
@@ -121,7 +127,7 @@ services:
       GF_SECURITY_ADMIN_PASSWORD: admin
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/:/etc/grafana/provisioning
       - ./grafana/grafana.ini:/etc/grafana/grafana.ini
     depends_on:
       - mimir
@@ -138,3 +144,5 @@ volumes:
   server-data:
   client-data:
   grafana-data:
+  tempo-data:
+    driver: local

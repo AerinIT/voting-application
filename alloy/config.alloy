@@ -28,25 +28,28 @@ loki.write "grafana_loki" {
 }
 
 
-otelcol.receiver.otlp "otlp_receiver" {
-  grpc {
-    endpoint = "0.0.0.0:4317"
-  }
-  http {
-    endpoint = "0.0.0.0:4318"
-  }
+otelcol.receiver.otlp "default" {
+  http {}
+  grpc {}
 
   output {
-    traces = [otelcol.exporter.otlp.grafanacloud.input,]
+    traces  = [otelcol.processor.batch.default.input]
   }
 }
 
-otelcol.exporter.otlp "grafanacloud" {
+otelcol.processor.batch "default" {
+  output {
+    traces  = [otelcol.exporter.otlp.tempo.input]
+  }
+}
+
+otelcol.exporter.otlp "tempo" {
   client {
-    endpoint = "tempo:4317"
-    tls {
-			insecure = true
-		}
+    endpoint = "http://tempo:3200/v1/traces"
+    tls  {
+      insecure = true
+      insecure_skip_verify = true
+    }
   }
 }
 
