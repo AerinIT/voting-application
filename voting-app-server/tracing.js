@@ -4,7 +4,7 @@ const {
 } = require('@opentelemetry/auto-instrumentations-node');
 const { PrometheusExporter } = require('@opentelemetry/exporter-prometheus');
 const { PeriodicExportingMetricReader } = require('@opentelemetry/sdk-metrics');
-const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');``
+const { OTLPTraceExporter } = require('@opentelemetry/exporter-trace-otlp-http');
 const sdk = new opentelemetry.NodeSDK({
   metricReader: new PrometheusExporter({
     endpoint: '/metrics',
