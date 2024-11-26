@@ -10,7 +10,7 @@ const sdk = new opentelemetry.NodeSDK({
     endpoint: '/metrics',
   }),
   tempoExporter: new OTLPTraceExporter({
-    url: 'http://alloy:4318/v1/traces',
+    url: 'http://alloy:4317',
   }),
   instrumentations: [getNodeAutoInstrumentations()],
 });

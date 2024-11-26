@@ -7,44 +7,31 @@ distributor:
     otlp:
       protocols:
         http:
-          enabled: true
         grpc:
-          enabled: true
-    query:
-      http_listen_port: 4317
-      grpc_listen_port: 4318
+
 ingester:
-  max_block_duration: 5m
-  block_retention: 1h
+  lifecycler:
+    address: 127.0.0.1
+    ring:
+      kvstore:
+        store: memberlist
 
 compactor:
   compaction:
-    block_retention: 1h
+    block_retention: 48h
 
 storage:
   trace:
     backend: local
-    wal:
-      path: /tmp/tempo/wal
     local:
-      path: /tmp/tempo/blocks
-
-overrides:
-  defaults:
-    metrics_generator:
-      processors: [service-graphs, span-metrics]
+      path: /var/tempo/blocks
+    wal:
+      path: /var/tempo/wal
 
 querier:
-  frontend_address: "tempo:9095"  
-  timeout: 10s  
-  max_concurrent_queries: 20
-  cache:
-    enabled: true
-    ttl: 10m
+  frontend_worker:
+    frontend_address: tempo:9095
 
-querier.frontend:
-  grpc_address: "alloy:4318"  
-  http_address: "alloy:12345"  
-  max_cache_size: 100MB  
-  query_timeout: 10s  
-  max_concurrent_queries: 20  
+query_frontend:
+  search:
+    query_timeout: 30s

@@ -1,3 +1,7 @@
+logging {
+  level  = "info"
+  format = "logfmt"
+}
 local.file_match "local_files" {
     path_targets = [{"__path__" = "/var/log/*.log"}]
     sync_period = "5s"
@@ -33,7 +37,16 @@ otelcol.receiver.otlp "default" {
   grpc {}
 
   output {
-    traces  = [otelcol.processor.batch.default.input]
+
+    traces  = [otelcol.processor.batch.default.input, otelcol.exporter.debug.testtrace.input, otelcol.connctor.spanlogs.spantrace.input]
+  }
+}
+
+otelcol.connctor.spanlogs "spantrace" {
+  roots = true
+
+  output {
+    logs = [otelcol.exporter.otlp.tempo.input]
   }
 }
 
@@ -45,7 +58,7 @@ otelcol.processor.batch "default" {
 
 otelcol.exporter.otlp "tempo" {
   client {
-    endpoint = "http://tempo:3200"
+    endpoint = "http://tempo:3200/otlp"
     tls  {
       insecure = true
       insecure_skip_verify = true
@@ -53,6 +66,9 @@ otelcol.exporter.otlp "tempo" {
   }
 }
 
+otelcol.exporter.debug "testtrace" {
+    verbosity = "detailed" 
+ }
 
 prometheus.scrape "app_server" {
   targets = [
