@@ -38,15 +38,7 @@ otelcol.receiver.otlp "default" {
 
   output {
 
-    traces  = [otelcol.processor.batch.default.input, otelcol.exporter.debug.testtrace.input, otelcol.connctor.spanlogs.spantrace.input]
-  }
-}
-
-otelcol.connctor.spanlogs "spantrace" {
-  roots = true
-
-  output {
-    logs = [otelcol.exporter.otlp.tempo.input]
+    traces  = [otelcol.processor.batch.default.input, otelcol.exporter.debug.testtrace.input]
   }
 }
 
