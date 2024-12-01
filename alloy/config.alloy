@@ -71,3 +71,49 @@ prometheus.remote_write "mimir" {
     url  = "http://mimir:9009/api/v1/push"
   }
 }
+
+
+// Configuration file
+local.file "endpoints" {
+    // The endpoints file is used to define the endpoints, credentials and options
+    // for the Alloy export to.
+    filename = "/etc/alloy/endpoints.json"
+}
+
+// Metrics scraping
+
+prometheus.scrape "mltpg_infra" {
+    targets = [
+        {"__address__" = "mimir:9009", group = "infrastructure", service = "mimir"},
+        {"__address__" = "tempo:3200", group = "infrastructure", service = "tempo"},
+        {"__address__" = "loki:3100", group = "infrastructure", service = "loki"},
+        {"__address__" = "pyroscope:4040", group = "infrastructure", service = "pyroscope"},
+        {"__address__" = "grafana:3000", group = "infrastructure", service = "grafana"},
+    ]
+    scrape_interval = "15s"
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "mltpg_infra"
+}
+
+// This component scrapes the Mythical application, defining unique prometheus labels.
+prometheus.scrape "mythical" {
+    targets = [
+        {"__address__" = "mythical-server:4000", group = "mythical", service = "mythical-server"},
+        {"__address__" = "mythical-requester:4001", group = "mythical", service = "mythical-requester"},
+    ]
+    scrape_interval = "2s"
+    scrape_timeout = "2s"
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "mythical"
+}
+
+prometheus.scrape "beyla_infra" {
+    targets = [
+        {"__address__" = "beyla-requester:9090", group = "beyla", service = "beyla-requester"},
+        {"__address__" = "beyla-server:9090", group = "beyla", service = "beyla-server"},
+        {"__address__" = "beyla-recorder:9090", group = "beyla", service = "beyla-recorder"},
+    ]
+    scrape_interval = "15s"
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "beyla_infra"
+}

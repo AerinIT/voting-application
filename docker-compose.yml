@@ -57,7 +57,8 @@ services:
     image: grafana/alloy:latest
     container_name: alloy
     volumes:
-      - ./alloy/config.alloy:/etc/alloy/config.alloy
+      - "./alloy/config.alloy:/etc/alloy/config.alloyz"
+      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
     ports:
       - "12345:12345"
       - "4318:4318"
@@ -136,6 +137,127 @@ services:
     networks:
       - voting-app-network
 
+  # A RabbitMQ queue used to send message between the requester and the server microservices.
+  mythical-queue:
+    image: rabbitmq:management
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics check_running
+      interval: 5s
+      timeout: 30s
+      retries: 10
+
+  # A postgres DB used to store data by the API server microservice.
+  mythical-database:
+    image: postgres:14.5
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: "mythical"
+    volumes:
+      - "postgres-data:/var/lib/postgresql/data"
+    ports:
+      - "5432:5432"
+    networks:
+      - voting-app-network
+  # A microservice that makes requests to the API server microservice. Requests are also pushed onto the mythical-queue.
+  mythical-requester:
+    #build:
+    #  context: ./source
+    #  dockerfile: docker/Dockerfile
+    #  args:
+    #    SERVICE: mythical-beasts-requester
+    image: grafana/intro-to-mltp:mythical-beasts-requester-latest
+    restart: always
+    depends_on:
+      mythical-queue:
+        condition: service_healthy
+      mythical-server:
+        condition: service_started
+    ports:
+      - "4001:4001"
+    environment:
+      - NAMESPACE=production
+      - LOGS_TARGET=http://alloy:3100/loki/api/v1/push
+      - TRACING_COLLECTOR_HOST=alloy
+      - TRACING_COLLECTOR_PORT=4317
+      - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
+      - OTEL_RESOURCE_ATTRIBUTES=ip=1.2.3.4
+      # Uncomment this line to enable timeshift example in the mythical-requester service, which will use timestamps
+      # in the log lines themselves to rewrite the default timestamp to the time specified in the logline.
+      #- TIMESHIFT=true
+    networks:
+      - voting-app-network
+  # The API server microservice.
+  # It writes logs directly to the Loki service, exposes metrics for the Prometheus
+  # service and sends traces to the Grafana Alloy instance.
+  mythical-server:
+    #build:
+    #  context: ./source
+    #  dockerfile: docker/Dockerfile
+    #  args:
+    #    SERVICE: mythical-beasts-server
+    image: grafana/intro-to-mltp:mythical-beasts-server-latest
+    restart: always
+    ports:
+      - "4000:4000"
+      - "8080:80"
+    depends_on:
+      - mythical-database
+    environment:
+      - NAMESPACE=production
+      - LOGS_TARGET=http://alloy:3100/loki/api/v1/push
+      - TRACING_COLLECTOR_HOST=alloy
+      - TRACING_COLLECTOR_PORT=4317
+      - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
+      - OTEL_RESOURCE_ATTRIBUTES=ip=1.2.3.5
+    networks:
+      - voting-app-network
+  # A microservice that consumes requests from the mythical-queue
+  mythical-recorder:
+    #build:
+    #  context: ./source
+    #  dockerfile: docker/Dockerfile
+    #  args:
+    #    SERVICE: mythical-beasts-recorder
+    image: grafana/intro-to-mltp:mythical-beasts-recorder-latest
+    restart: always
+    depends_on:
+      mythical-queue:
+        condition: service_healthy
+    ports:
+      - "4002:4002"
+    environment:
+      - NAMESPACE=production
+      - LOGS_TARGET=http://alloy:3100/loki/api/v1/push
+      - TRACING_COLLECTOR_HOST=alloy
+      - TRACING_COLLECTOR_PORT=4317
+      - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
+      - OTEL_RESOURCE_ATTRIBUTES=ip=1.2.3.5
+
+  k6:
+    image: grafana/k6:0.53.0
+    volumes:
+      - "./k6:/scripts"
+    environment:
+      - K6_PROMETHEUS_RW_SERVER_URL=http://mimir:9009/api/v1/push
+      - K6_DURATION=3600s
+      - K6_VUS=4
+      - K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true
+    restart: always
+    command: ["run", "-o", "experimental-prometheus-rw", "/scripts/mythical-loadtest.js"]
+    networks:
+      - voting-app-network
+  pyroscope:
+    image: grafana/pyroscope:1.8.0
+    ports:
+      - "4040:4040"
+    command: ["server"]
+    networks:
+      - voting-app-network
+
 networks:
   voting-app-network:
     driver: bridge
@@ -144,5 +266,6 @@ volumes:
   server-data:
   client-data:
   grafana-data:
+  postgres-data:
   tempo-data:
     driver: local
