@@ -5,7 +5,7 @@ apps:
     name: grafana-synthetic-monitoring-app
     disabled: false
     jsonData:
-      apiHost: synthetic-monitoring-api-ap-south-1.grafana.net
+      apiHost: https://synthetic-monitoring-api-ap-south-1.grafana.net
       stackId: "1066880"
       logs:
         grafanaName: loki-voting
