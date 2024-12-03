@@ -1,90 +1,47 @@
 version: '3.9'
-services:
 
+services:
+  # Grafana Alloy batches and processes traces sent to it, generating
+  # auto-logs from those traces.
+  # Includes Metrics, Logs, Traces and Profiles.
   alloy:
-    image: grafana/alloy:latest
-    container_name: alloy
-    volumes:
-      - "./alloy/config.alloy:/etc/alloy/config.alloy"
-      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
+    image: grafana/alloy:v1.3.1
     ports:
-      - "12345:12345"
+      - "12347:12345"
       - "12348:12348"
       - "6832:6832"
       - "55679:55679"
-    command:
-      - run
-      - /etc/alloy/config.alloy
-      - --server.http.listen-addr=0.0.0.0:12345
-      - --storage.path=/var/lib/alloy/data
-    depends_on:
-      - loki
-      - tempo
-      - mimir
+    volumes:
+      - "./alloy/config.alloy:/etc/alloy/config.alloy"
+      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
+    command: [
+      "run",
+      "--server.http.listen-addr=0.0.0.0:12345",
+      "--stability.level=public-preview",
+      "/etc/alloy/config.alloy",
+    ]
     networks:
       - voting-app-network
 
-  loki:
-    image: grafana/loki:3.2.0
-    container_name: loki
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yml
-    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yml "]
-    networks:
-      - voting-app-network
-
-  tempo:
-    image: grafana/tempo:2.6.0
-    ports:
-      - "3200:3200"
-      - "4317:4317"
-      - "4318:4318"
-      - "9411:9411"
-      - "55680:55680"
-      - "55681:55681"
-      - "14250:14250"
-    command: [ "-config.file=/etc/tempo-config.yml" ]
-    volumes:
-      - "./tempo/tempo-config.yml:/etc/tempo-config.yml"
-    networks:
-      - voting-app-network
-  
-  mimir:
-    image: grafana/mimir:2.13.0
-    container_name: mimir
-    ports:
-      - "9009:9009"
-    volumes:
-      - ./mimir/mimir-config.yml:/etc/mimir/mimir-config.yml
-    command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir/mimir-config.yml"]
-    networks:
-      - voting-app-network
-
+  # The Grafana dashboarding server.
   grafana:
     image: grafana/grafana:11.2.0
-    container_name: grafana
-    ports:
-      - "3000:3000"
     volumes:
+      # - "./grafana/definitions:/var/lib/grafana/dashboards"
       - "./grafana/provisioning:/etc/grafana/provisioning"
       - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+    ports:
+      - "3000:3000"
     environment:
       - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
       - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app,grafana-pyroscope-app
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
       - GF_AUTH_DISABLE_LOGIN_FORM=true
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - mimir
-      - loki
-      - tempo
     networks:
       - voting-app-network
 
+  # A RabbitMQ queue used to send message between the requester and the server microservices.
   mythical-queue:
     image: rabbitmq:management
     restart: always
@@ -100,26 +57,34 @@ services:
       - voting-app-network
 
   # A postgres DB used to store data by the API server microservice.
+  # mythical-database:
+  #   image: postgres:14.5
+  #   restart: always
+  #   environment:
+  #     POSTGRES_PASSWORD: "mythical"
+  #   volumes:
+  #     - "postgres:/var/lib/postgresql/data"
+  #   ports:
+  #     - "5432:5432"
+  #   networks:
+  #     - voting-app-network
+
   mythical-database:
-    image: postgres:14.5
-    restart: always
-    environment:
-      POSTGRES_PASSWORD: "mythical"
-    volumes:
-      - "postgres-data:/var/lib/postgresql/data"
+    image: redis:alpine
+    container_name: voting-app-redis
     ports:
-      - "5432:5432"
+      - "6379:6379"
     networks:
       - voting-app-network
 
   # A microservice that makes requests to the API server microservice. Requests are also pushed onto the mythical-queue.
   mythical-requester:
-    #build:
-    #  context: ./source
-    #  dockerfile: docker/Dockerfile
-    #  args:
-    #    SERVICE: mythical-beasts-requester
-    image: grafana/intro-to-mltp:mythical-beasts-requester-latest
+    build:
+     context: ./source
+     dockerfile: docker/Dockerfile
+     args:
+       SERVICE: mythical-beasts-requester
+    # image: grafana/intro-to-mltp:mythical-beasts-requester-latest
     restart: always
     depends_on:
       mythical-queue:
@@ -145,16 +110,16 @@ services:
   # It writes logs directly to the Loki service, exposes metrics for the Prometheus
   # service and sends traces to the Grafana Alloy instance.
   mythical-server:
-    #build:
-    #  context: ./source
-    #  dockerfile: docker/Dockerfile
-    #  args:
-    #    SERVICE: mythical-beasts-server
-    image: grafana/intro-to-mltp:mythical-beasts-server-latest
+    build:
+     context: ./source
+     dockerfile: docker/Dockerfile
+     args:
+       SERVICE: mythical-beasts-server
+    # image: grafana/intro-to-mltp:mythical-beasts-server-latest
     restart: always
     ports:
       - "4000:4000"
-      - "8080:80"
+      - "80:80"
     depends_on:
       - mythical-database
     environment:
@@ -169,12 +134,12 @@ services:
 
   # A microservice that consumes requests from the mythical-queue
   mythical-recorder:
-    #build:
-    #  context: ./source
-    #  dockerfile: docker/Dockerfile
-    #  args:
-    #    SERVICE: mythical-beasts-recorder
-    image: grafana/intro-to-mltp:mythical-beasts-recorder-latest
+    build:
+     context: ./source
+     dockerfile: docker/Dockerfile
+     args:
+       SERVICE: mythical-beasts-recorder
+    # image: grafana/intro-to-mltp:mythical-beasts-recorder-latest
     restart: always
     depends_on:
       mythical-queue:
@@ -189,17 +154,54 @@ services:
       - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
       - OTEL_RESOURCE_ATTRIBUTES=ip=1.2.3.5
     networks:
-      - voting-app-network
+      - voting-app-network      
 
   # The Tempo service stores traces send to it by Grafana Alloy, and takes
   # queries from Grafana to visualise those traces.
-       
+  tempo:
+    image: grafana/tempo:2.6.0
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+      - "9411:9411"
+      - "55680:55680"
+      - "55681:55681"
+      - "14250:14250"
+    command: [ "-config.file=/etc/tempo-config.yaml" ]
+    volumes:
+      - "./tempo/tempo-config.yaml:/etc/tempo-config.yaml"
+    networks:
+      - voting-app-network
+
+  # The Loki service stores logs sent to it, and takes queries from Grafana
+  # to visualise those logs.
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
+    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yaml "]
+    networks:
+      - voting-app-network
+
+  mimir:
+    image: grafana/mimir:2.13.0
+    container_name: mimir
+    ports:
+      - "9009:9009"
+    volumes:
+      - ./mimir/mimir-config.yaml:/etc/mimir/mimir-config.yaml
+    command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir/mimir-config.yaml"]
+    networks:
+      - voting-app-network
+
 networks:
   voting-app-network:
     driver: bridge
 
 volumes:
-  grafana-data:
-  postgres-data:
-  tempo-data:
-    driver: local
+  grafana:
+  postgres:

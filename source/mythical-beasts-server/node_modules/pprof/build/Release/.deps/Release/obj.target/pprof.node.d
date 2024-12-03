@@ -1,0 +1,1 @@
+cmd_Release/obj.target/pprof.node := g++ -o Release/obj.target/pprof.node -shared -pthread -rdynamic -m64  -Wl,-soname=pprof.node -Wl,--start-group Release/obj.target/pprof/bindings/profiler.o -Wl,--end-group 
