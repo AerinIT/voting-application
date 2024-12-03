@@ -68,7 +68,6 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      # - "./grafana/definitions:/var/lib/grafana/dashboards"
       - "./grafana/provisioning:/etc/grafana/provisioning"
       - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
     environment:
@@ -85,28 +84,6 @@ services:
       - tempo
     networks:
       - voting-app-network
-
-  # k6:
-  #   image: grafana/k6:0.53.0
-  #   volumes:
-  #     - "./k6:/scripts"
-  #   environment:
-  #     - K6_PROMETHEUS_RW_SERVER_URL=http://mimir:9009/api/v1/push
-  #     - K6_DURATION=3600s
-  #     - K6_VUS=4
-  #     - K6_PROMETHEUS_RW_TREND_AS_NATIVE_HISTOGRAM=true
-  #   restart: always
-  #   command: ["run", "-o", "experimental-prometheus-rw", "/scripts/mythical-loadtest.js"]
-  #   networks:
-  #     - voting-app-network
-
-  # pyroscope:
-  #   image: grafana/pyroscope:1.8.0
-  #   ports:
-  #     - "4040:4040"
-  #   command: ["server"]
-  #   networks:
-  #     - voting-app-network
 
   mythical-queue:
     image: rabbitmq:management
