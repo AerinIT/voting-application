@@ -1,90 +1,6 @@
 version: '3.9'
 services:
 
-  alloy:
-    image: grafana/alloy:latest
-    container_name: alloy
-    volumes:
-      - "./alloy/config.alloy:/etc/alloy/config.alloy"
-      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
-    ports:
-      - "12345:12345"
-      - "12348:12348"
-      - "6832:6832"
-      - "55679:55679"
-    command:
-      - run
-      - /etc/alloy/config.alloy
-      - --server.http.listen-addr=0.0.0.0:12345
-      - --storage.path=/var/lib/alloy/data
-    depends_on:
-      - loki
-      - tempo
-      - mimir
-    networks:
-      - voting-app-network
-
-  loki:
-    image: grafana/loki:3.2.0
-    container_name: loki
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yml
-    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yml "]
-    networks:
-      - voting-app-network
-
-  tempo:
-    image: grafana/tempo:2.6.0
-    ports:
-      - "3200:3200"
-      - "4317:4317"
-      - "4318:4318"
-      - "9411:9411"
-      - "55680:55680"
-      - "55681:55681"
-      - "14250:14250"
-    command: [ "-config.file=/etc/tempo-config.yml" ]
-    volumes:
-      - "./tempo/tempo-config.yml:/etc/tempo-config.yml"
-    networks:
-      - voting-app-network
-  
-  mimir:
-    image: grafana/mimir:2.13.0
-    container_name: mimir
-    ports:
-      - "9009:9009"
-    volumes:
-      - ./mimir/mimir-config.yml:/etc/mimir/mimir-config.yml
-    command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir/mimir-config.yml"]
-    networks:
-      - voting-app-network
-
-  grafana:
-    image: grafana/grafana:11.2.0
-    container_name: grafana
-    ports:
-      - "3000:3000"
-    volumes:
-      - "./grafana/provisioning:/etc/grafana/provisioning"
-      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
-    environment:
-      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
-      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app,grafana-pyroscope-app
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-      - GF_SECURITY_ADMIN_USER=admin
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    depends_on:
-      - mimir
-      - loki
-      - tempo
-    networks:
-      - voting-app-network
-
   mythical-queue:
     image: rabbitmq:management
     restart: always
@@ -194,6 +110,91 @@ services:
   # The Tempo service stores traces send to it by Grafana Alloy, and takes
   # queries from Grafana to visualise those traces.
        
+  alloy:
+    image: grafana/alloy:latest
+    container_name: alloy
+    volumes:
+      - "./alloy/config.alloy:/etc/alloy/config.alloy"
+      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
+    ports:
+      - "12345:12345"
+      - "12348:12348"
+      - "6832:6832"
+      - "55679:55679"
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --server.http.listen-addr=0.0.0.0:12345
+      - --storage.path=/var/lib/alloy/data
+    depends_on:
+      - loki
+      - tempo
+      - mimir
+    networks:
+      - voting-app-network
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yml
+    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yml "]
+    networks:
+      - voting-app-network
+
+  tempo:
+    image: grafana/tempo:2.6.0
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+      - "9411:9411"
+      - "55680:55680"
+      - "55681:55681"
+      - "14250:14250"
+    command: [ "-config.file=/etc/tempo-config.yml" ]
+    volumes:
+      - "./tempo/tempo-config.yml:/etc/tempo-config.yml"
+    networks:
+      - voting-app-network
+  
+  mimir:
+    image: grafana/mimir:2.13.0
+    container_name: mimir
+    ports:
+      - "9009:9009"
+    volumes:
+      - ./mimir/mimir-config.yml:/etc/mimir/mimir-config.yml
+    command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir/mimir-config.yml"]
+    networks:
+      - voting-app-network
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - "./grafana/provisioning:/etc/grafana/provisioning"
+      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app,grafana-pyroscope-app
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_AUTH_DISABLE_LOGIN_FORM=true
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - mimir
+      - loki
+      - tempo
+    networks:
+      - voting-app-network
+
+ 
 networks:
   voting-app-network:
     driver: bridge
