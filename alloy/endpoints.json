@@ -20,12 +20,5 @@
             "insecure": true,
             "insecureSkipVerify": true
         }
-    },
-    "profiles": {
-        "url": "http://pyroscope:4040",
-        "basicAuth": {
-            "username": "",
-            "password": ""
-        }
     }
 }

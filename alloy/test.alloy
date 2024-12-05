@@ -7,6 +7,7 @@ prometheus.scrape "mltpg_infra" {
         {"__address__" = "mimir:9009", group = "infrastructure", service = "mimir"},
         {"__address__" = "tempo:3200", group = "infrastructure", service = "tempo"},
         {"__address__" = "loki:3100", group = "infrastructure", service = "loki"},
+        {"__address__" = "pyroscope:4040", group = "infrastructure", service = "pyroscope"},
         {"__address__" = "grafana:3000", group = "infrastructure", service = "grafana"},
     ]
     scrape_interval = "15s"
