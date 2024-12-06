@@ -1,46 +1,10 @@
 version: '3'
 
 services:
-
-  # Grafana Alloy batches and processes traces sent to it, generating
-  # auto-logs from those traces.
-  # Includes Metrics, Logs, Traces and Profiles.
-  alloy:
-    image: grafana/alloy:v1.3.1
-    ports:
-      - "12345:12345"
-    volumes:
-      - "./alloy/config.alloy:/etc/alloy/config.alloy"
-      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
-    command: [
-      "run",
-      "--server.http.listen-addr=0.0.0.0:12345",
-      "--stability.level=public-preview",
-      "/etc/alloy/config.alloy",
-    ]
-    networks:
-      - voting-app-network
-
-  grafana:
-    image: grafana/grafana:11.2.0
-    volumes:
-      # - "./grafana/definitions:/var/lib/grafana/dashboards"
-      - "./grafana/provisioning:/etc/grafana/provisioning"
-      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
-      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app,grafana-pyroscope-app
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-    networks:
-      - voting-app-network
-
   # A postgres DB used to store data by the API server microservice.
   votting-app-database:
     image: postgres:14.5
+    container_name: voting-app-database
     restart: always
     environment:
       POSTGRES_PASSWORD: "postgres"
@@ -57,14 +21,10 @@ services:
   votting-app-server:
     build:
      context: ./Votting-App-Server
-     dockerfile: ./Dockerfile
-     args:
-       SERVICE: votting-app-server
-    # image: grafana/intro-to-mltp:mythical-beasts-server-latest
+    container_name: voting-app-server
     restart: always
     ports:
       - "5000:5000"
-      - "80:80"
     depends_on:
       - votting-app-database
     environment:
@@ -80,52 +40,12 @@ services:
   votting-app-client:
     build:
      context: ./Votting-App-Client
-     dockerfile: ./Dockerfile
-     args:
-       SERVICE: votting-app-client
+    container_name: voting-app-client
     restart: always
     ports:
       - "3001:3001"
     networks:
       - voting-app-network       
-
-  # The Tempo service stores traces send to it by Grafana Alloy, and takes
-  # queries from Grafana to visualise those traces.
-  tempo:
-    image: grafana/tempo:2.6.0
-    ports:
-      - "3200:3200"
-      - "4317:4317"
-      - "4318:4318"
-    command: [ "-config.file=/etc/tempo-config.yaml" ]
-    volumes:
-      - "./tempo/tempo-config.yaml:/etc/tempo-config.yaml"
-    networks:
-      - voting-app-network
-
-  # The Loki service stores logs sent to it, and takes queries from Grafana
-  # to visualise those logs.
-  loki:
-    image: grafana/loki:3.2.0
-    container_name: loki
-    ports:
-      - "3100:3100"
-    volumes:
-      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
-    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yaml "]
-    networks:
-      - voting-app-network
-
-  mimir:
-    image: grafana/mimir:2.13.0
-    container_name: mimir
-    ports:
-      - "9009:9009"
-    volumes:
-      - ./mimir/mimir-config.yaml:/etc/mimir/mimir-config.yaml
-    command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir/mimir-config.yaml"]
-    networks:
-      - voting-app-network
   
   nginx:
     image: nginx:alpine
@@ -145,5 +65,4 @@ networks:
     driver: bridge
 
 volumes:
-  grafana:
   postgres:
