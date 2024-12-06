@@ -39,11 +39,11 @@ services:
       - voting-app-network
 
   # A postgres DB used to store data by the API server microservice.
-  mythical-database:
+  votting-app-database:
     image: postgres:14.5
     restart: always
     environment:
-      POSTGRES_PASSWORD: "mythical"
+      POSTGRES_PASSWORD: "postgres"
     volumes:
       - "postgres:/var/lib/postgresql/data"
     ports:
@@ -54,19 +54,19 @@ services:
   # The API server microservice.
   # It writes logs directly to the Loki service, exposes metrics for the Prometheus
   # service and sends traces to the Grafana Alloy instance.
-  mythical-server:
+  votting-app-server:
     build:
      context: ./Votting-App-Server
      dockerfile: ./Dockerfile
      args:
-       SERVICE: mythical-beasts-server
+       SERVICE: votting-app-server
     # image: grafana/intro-to-mltp:mythical-beasts-server-latest
     restart: always
     ports:
       - "5000:5000"
       - "80:80"
     depends_on:
-      - mythical-database
+      - votting-app-database
     environment:
       - NAMESPACE=production
       - LOGS_TARGET=http://alloy:3100/loki/api/v1/push
@@ -124,6 +124,19 @@ services:
     volumes:
       - ./mimir/mimir-config.yaml:/etc/mimir/mimir-config.yaml
     command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir/mimir-config.yaml"]
+    networks:
+      - voting-app-network
+  
+  nginx:
+    image: nginx:alpine
+    container_name: voting-app-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - votting-app-client
+      - votting-app-server
     networks:
       - voting-app-network
 

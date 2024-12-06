@@ -1,7 +1,3 @@
-// This is shared between the requester, the recorder and the server
-// As such, to only do what's needed, we init using a
-// function and then pass the service context to
-// determine what to initialise.
 module.exports = (context, serviceName) => {
   // Include all OpenTelemetry dependencies for tracing
   const api = require("@opentelemetry/api");

@@ -28,10 +28,10 @@ datasources:
         filterByTraceID: false
         spanEndTimeShift: "500ms"
         spanStartTimeShift: "-500ms"
-        tags: ['beast']
+        tags: ['vottingdb']
     correlations:
       - targetUID: postgres
-        label: "Count $$beast in table"
+        label: "Count $$vottingdb in table"
         description: ''
         config:
           type: query
@@ -40,7 +40,7 @@ datasources:
             editorMode: code
             format: table
             rawQuery: true
-            rawSql: "SELECT COUNT(*) FROM $$beast;"
+            rawSql: "SELECT COUNT(*) FROM $$vottingdb;"
             refId: A
             sql:
               columns:
@@ -53,8 +53,8 @@ datasources:
               limit: 50
           transformations:
           - type: regex
-            expression: .*{"value":"(.*?)","key":"beast".*}
-            mapValue: beast
+            expression: .*{"value":"(.*?)","key":"vottingdb".*}
+            mapValue: vottingdb
       - targetUID: postgres
         label: "$$statement"
         description: "Runs the found DB statement in the span"
@@ -98,14 +98,14 @@ datasources:
       httpMethod: POST
       timeInterval: "2s"
 
-  - name: Postgres
+  - name: votting-app-database
     type: postgres
     uid: postgres
-    url: mythical-database:5432
+    url: votting-app-database:5432
     user: postgres
     jsonData:
       database: postgres
       sslmode: disable
       postgresVersion: 1400
     secureJsonData:
-      password: mythical
+      password: postgres

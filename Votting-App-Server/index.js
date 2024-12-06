@@ -1,7 +1,7 @@
 const traceUtils = require('./tracing')('server', 'votting-app-server');
 const Pyroscope = require('@pyroscope/nodejs');
 const { expressMiddleware } = require('@pyroscope/nodejs');
-const logUtils = require('./logging')('mythical-server', 'server');
+const logUtils = require('./logging')('votting-app-server', 'server');
 const cors = require('cors');
 
 (async () => {
@@ -26,50 +26,15 @@ const cors = require('cors');
     app.use(cors());
     let pgClient;
 
-    const Database = {
-        GET: 0,
-        POST: 1,
-        PUT: 2,
-        DELETE: 3,
-        DROP: 4,
-        CREATE: 5,
-    };
 
     const responseBucket = new promClient.Histogram({
-        name: 'mythical_request_times',
+        name: 'votting_request_times',
         help: 'Response times for the endpoints',
         labelNames: ['method', 'status', spanTag, 'endpoint', 'table', 'rows', 'columns'],
         buckets: [10, 20, 50, 100, 200, 500, 1000, 2000, 4000, 8000, 16000],
         enableExemplars: true,
     });
 
-    const databaseAction = async (action) => {
-        const span = api.trace.getSpan(api.context.active());
-        span.setAttribute('span.kind', api.SpanKind.CLIENT);
-
-        switch (action.method) {
-            case Database.GET:
-                return await pgClient.query(`SELECT name FROM ${action.table}`);
-            case Database.POST:
-                return await pgClient.query(`INSERT INTO ${action.table}(name) VALUES ($1)`, [action.name]);
-            case Database.PUT:
-                return await pgClient.query(`UPDATE ${action.table} SET name = $1 WHERE id = $2`, [action.name, action.id]);
-            case Database.DELETE:
-                return await pgClient.query(`DELETE FROM ${action.table} WHERE name = $1`, [action.name]);
-            case Database.DROP:
-                for (const table of nameSet) {
-                    await pgClient.query(`DROP TABLE IF EXISTS ${table}`);
-                }
-                return;
-            case Database.CREATE:
-                for (const table of nameSet) {
-                    await pgClient.query(`CREATE TABLE IF NOT EXISTS ${table}(id SERIAL PRIMARY KEY, name VARCHAR(50) UNIQUE NOT NULL);`);
-                }
-                return;
-            default:
-                throw new Error(`Invalid database method: ${action.method}`);
-        }
-    };
 
     const responseMetric = (details) => {
         const timeMs = Date.now() - details.start;
@@ -419,45 +384,6 @@ const cors = require('cors');
             res.status(500).send('Error fetching result.');
         }
     });
-    
-    const tableWipe = async () => {
-        const requestSpan = tracer.startSpan('server');
-        const { traceId } = requestSpan.spanContext();
-
-        await api.context.with(api.trace.setSpan(api.context.active(), requestSpan), async () => {
-            teardownInProgress = true;
-
-            try {
-                logEntry({
-                    level: 'info',
-                    job: `${process.env.NAMESPACE}/${servicePrefix}-server`,
-                    namespace: process.env.NAMESPACE,
-                    message: `traceId=${traceId} message="DROPing tables..."`,
-                });
-
-                await databaseAction({ method: Database.DROP });
-
-                logEntry({
-                    level: 'info',
-                    job: `{servicePrefix}-server`,
-                    namespace: process.env.NAMESPACE,
-                    message: `traceId=${traceId} message="CREATEing tables..."`,
-                });
-
-                await databaseAction({ method: Database.CREATE });
-            } catch (err) {
-                logEntry({
-                    level: 'error',
-                    job: `${servicePrefix}-server`,
-                    namespace: process.env.NAMESPACE,
-                    message: `traceId=${traceId} error="${err}"`,
-                });
-            } finally {
-                teardownInProgress = false;
-                requestSpan.end();
-            }
-        });
-    };
 
     const startServer = async () => {
         const requestSpan = tracer.startSpan('server');
@@ -472,10 +398,10 @@ const cors = require('cors');
     
                 // Initial connection to Postgres (default database, usually 'postgres')
                 pgClient = new Client({
-                    host: 'mythical-database',
+                    host: 'votting-app-database',
                     port: 5432,
                     user: 'postgres',
-                    password: 'mythical',
+                    password: 'postgres',
                 });
     
                 await pgClient.connect();
@@ -503,10 +429,10 @@ const cors = require('cors');
                 // Disconnect from the current database and reconnect to the newly created one
                 await pgClient.end();
                 pgClient = new Client({
-                    host: 'mythical-database',
+                    host: 'votting-app-database',
                     port: 5432,
                     user: 'postgres',
-                    password: 'mythical',
+                    password: 'postgres',
                     database: spanTag, // Connect to the newly created database
                 });
     
