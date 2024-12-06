@@ -1,62 +1,7 @@
-version: '3'
+version: "3"
 
 services:
-  # Grafana Alloy batches and processes traces sent to it, generating
-  # auto-logs from those traces.
-  # Includes Metrics, Logs, Traces and Profiles.
-  alloy:
-    image: grafana/alloy:v1.3.1
-    ports:
-      - "12347:12345"
-      - "12348:12348"
-      - "6832:6832"
-      - "55679:55679"
-    volumes:
-      - "./alloy/config.alloy:/etc/alloy/config.alloy"
-      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
-    command: [
-      "run",
-      "--server.http.listen-addr=0.0.0.0:12345",
-      "--stability.level=public-preview",
-      "/etc/alloy/config.alloy",
-    ]
-    networks:
-      - voting-app-network
 
-  # The Grafana dashboarding server.
-  grafana:
-    image: grafana/grafana:11.2.0
-    volumes:
-      # - "./grafana/definitions:/var/lib/grafana/dashboards"
-      - "./grafana/provisioning:/etc/grafana/provisioning"
-      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
-      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app,grafana-pyroscope-app
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-      - GF_AUTH_DISABLE_LOGIN_FORM=true
-    networks:
-      - voting-app-network
-
-  # A RabbitMQ queue used to send message between the requester and the server microservices.
-  # mythical-queue:
-  #   image: rabbitmq:management
-  #   restart: always
-  #   ports:
-  #     - "5672:5672"
-  #     - "15672:15672"
-  #   healthcheck:
-  #     test: rabbitmq-diagnostics check_running
-  #     interval: 5s
-  #     timeout: 30s
-  #     retries: 10
-  #   networks:
-  #     - voting-app-network
-
-  # A postgres DB used to store data by the API server microservice.
   mythical-database:
     image: postgres:14.5
     restart: always
@@ -69,53 +14,13 @@ services:
     networks:
       - voting-app-network
 
-  # mythical-database:
-  #   image: redis:alpine
-  #   container_name: voting-app-redis
-  #   ports:
-  #     - "6379:6379"
-  #   networks:
-  #     - voting-app-network
 
-  # A microservice that makes requests to the API server microservice. Requests are also pushed onto the mythical-queue.
-  # mythical-requester:
-  #   build:
-  #    context: ./source
-  #    dockerfile: docker/Dockerfile
-  #    args:
-  #      SERVICE: mythical-beasts-requester
-  #   # image: grafana/intro-to-mltp:mythical-beasts-requester-latest
-  #   restart: always
-  #   depends_on:
-  #     mythical-queue:
-  #       condition: service_healthy
-  #     mythical-server:
-  #       condition: service_started
-  #   ports:
-  #     - "4001:4001"
-  #   environment:
-  #     - NAMESPACE=production
-  #     - LOGS_TARGET=http://alloy:3100/loki/api/v1/push
-  #     - TRACING_COLLECTOR_HOST=alloy
-  #     - TRACING_COLLECTOR_PORT=4317
-  #     - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
-  #     - OTEL_RESOURCE_ATTRIBUTES=ip=1.2.3.4
-  #     # Uncomment this line to enable timeshift example in the mythical-requester service, which will use timestamps
-  #     # in the log lines themselves to rewrite the default timestamp to the time specified in the logline.
-  #     #- TIMESHIFT=true
-  #   networks:
-  #     - voting-app-network
-
-  # The API server microservice.
-  # It writes logs directly to the Loki service, exposes metrics for the Prometheus
-  # service and sends traces to the Grafana Alloy instance.
   mythical-server:
     build:
-     context: ./source
-     dockerfile: ./Dockerfile
-     args:
-       SERVICE: mythical-beasts-server
-    # image: grafana/intro-to-mltp:mythical-beasts-server-latest
+      context: ./source
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE: mythical-beasts-server
     restart: always
     ports:
       - "5000:5000"
@@ -132,63 +37,37 @@ services:
     networks:
       - voting-app-network
 
-  votting-app-client:
+  voting-app-client:
     build:
-     context: ./votting-app-client
-     dockerfile: ./Dockerfile
-     args:
-       SERVICE: votting-app-client
-    # image: grafana/intro-to-mltp:mythical-beasts-server-latest
+      context: ./voting-app-client
+      dockerfile: ./Dockerfile
+      args:
+        SERVICE: voting-app-client
     restart: always
     ports:
       - "3001:3001"
     networks:
-      - voting-app-network      
+      - voting-app-network
 
-  # A microservice that consumes requests from the mythical-queue
-  # mythical-recorder:
-  #   build:
-  #    context: ./source
-  #    dockerfile: docker/Dockerfile
-  #    args:
-  #      SERVICE: mythical-beasts-recorder
-  #   # image: grafana/intro-to-mltp:mythical-beasts-recorder-latest
-  #   restart: always
-  #   depends_on:
-  #     mythical-queue:
-  #       condition: service_healthy
-  #   ports:
-  #     - "4002:4002"
-  #   environment:
-  #     - NAMESPACE=production
-  #     - LOGS_TARGET=http://alloy:3100/loki/api/v1/push
-  #     - TRACING_COLLECTOR_HOST=alloy
-  #     - TRACING_COLLECTOR_PORT=4317
-  #     - OTEL_EXPORTER_OTLP_TRACES_INSECURE=true
-  #     - OTEL_RESOURCE_ATTRIBUTES=ip=1.2.3.5
-  #   networks:
-  #     - voting-app-network      
 
-  # The Tempo service stores traces send to it by Grafana Alloy, and takes
-  # queries from Grafana to visualise those traces.
-  tempo:
-    image: grafana/tempo:2.6.0
+  alloy:
+    image: grafana/alloy:v1.3.1
     ports:
-      - "3200:3200"
-      - "4317:4317"
-      - "4318:4318"
-      - "9411:9411"
-      - "55680:55680"
-      - "55681:55681"
-      - "14250:14250"
-    command: [ "-config.file=/etc/tempo-config.yaml" ]
+      - "12345:12345"
+      - "12348:12348"
     volumes:
-      - "./tempo/tempo-config.yaml:/etc/tempo-config.yaml"
+      - "./alloy/config.alloy:/etc/alloy/config.alloy"
+      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
+    command:
+      [
+        "run",
+        "--server.http.listen-addr=0.0.0.0:12345",
+        "--stability.level=public-preview",
+        "/etc/alloy/config.alloy",
+      ]
     networks:
       - voting-app-network
 
-  # The Loki service stores logs sent to it, and takes queries from Grafana
-  # to visualise those logs.
   loki:
     image: grafana/loki:3.2.0
     container_name: loki
@@ -196,9 +75,14 @@ services:
       - "3100:3100"
     volumes:
       - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
-    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yaml "]
+    command:
+      [
+        "--pattern-ingester.enabled=true",
+        "-config.file=/etc/loki/local-config.yaml ",
+      ]
     networks:
       - voting-app-network
+
 
   mimir:
     image: grafana/mimir:2.13.0
@@ -207,7 +91,40 @@ services:
       - "9009:9009"
     volumes:
       - ./mimir/mimir-config.yaml:/etc/mimir/mimir-config.yaml
-    command: ["-ingester.native-histograms-ingestion-enabled=true", "-config.file=/etc/mimir/mimir-config.yaml"]
+    command:
+      [
+        "-ingester.native-histograms-ingestion-enabled=true",
+        "-config.file=/etc/mimir/mimir-config.yaml",
+      ]
+    networks:
+      - voting-app-network
+
+
+  tempo:
+    image: grafana/tempo:2.6.0
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    command: ["-config.file=/etc/tempo-config.yaml"]
+    volumes:
+      - "./tempo/tempo-config.yaml:/etc/tempo-config.yaml"
+    networks:
+      - voting-app-network
+
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    volumes:
+      - "./grafana/provisioning:/etc/grafana/provisioning"
+      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
       - voting-app-network
 
@@ -218,3 +135,17 @@ networks:
 volumes:
   grafana:
   postgres:
+
+
+
+
+
+
+
+
+
+
+
+
+
+

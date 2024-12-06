@@ -9,9 +9,9 @@ datasources:
     jsonData:
       derivedFields:
         - datasourceUid: tempo
-          matcherRegex: "^.*?traceI[d|D]=(\\w+).*$"
+          matcherRegex: "(?:trace(?:Id|ID|_?id)|(?:^|\\s+)tid)[:=]\\s*(\\w+)"
           name: traceId
-          url: '$${__value.raw}'
+          url: "$${__value.raw}"
 
   - name: Tempo
     type: tempo
@@ -22,70 +22,79 @@ datasources:
       nodeGraph:
         enabled: true
       serviceMap:
-        datasourceUid: 'Mimir'
+        datasourceUid: "Mimir"
       tracesToLogs:
         datasourceUid: loki
-        filterByTraceID: false
+        filterByTraceID: ture
         spanEndTimeShift: "500ms"
         spanStartTimeShift: "-500ms"
-        tags: ['beast']
-    correlations:
-      - targetUID: postgres
-        label: "Count $$beast in table"
-        description: ''
-        config:
-          type: query
-          field: tags
-          target:
-            editorMode: code
-            format: table
-            rawQuery: true
-            rawSql: "SELECT COUNT(*) FROM $$beast;"
-            refId: A
-            sql:
-              columns:
-              - parameters: []
-                type: function
-              groupBy:
-              - property:
-                  type: string
-                type: groupBy
-              limit: 50
-          transformations:
-          - type: regex
-            expression: .*{"value":"(.*?)","key":"beast".*}
-            mapValue: beast
-      - targetUID: postgres
-        label: "$$statement"
-        description: "Runs the found DB statement in the span"
-        config:
-          type: query
-          field: tags
-          target:
-            editorMode: code
-            filters:
-            - operator: "="
-              scope: span
-            format: table
-            limit: 20
-            queryType: traceqlSearch
-            rawQuery: true
-            rawSql: "$$statement;"
-            refId: A
-            sql:
-              columns:
-              - parameters: []
-                type: function
-              groupBy:
-              - property:
-                  type: string
-                type: groupBy
-              limit: 50
-          transformations:
-          - type: regex
-            expression: .*{"value":"(.*?)","key":"db.statement".*}
-            mapValue: statement
-
+        tags: ["beast"]
+      traceToMetrics:
+        datasourceUid: "Mimir"
+        spanStartTimeShift: "-1h"
+        spanEndTimeShift: "1h"
+        tags: [{ key: "service.name", value: "service" }, { key: "job" }]
+        queries:
+          - name: "Request Rate"
+            query: "rate(traces_spanmetrics_calls_total{$__tags}[$__rate_interval])"
+          - name: "Error Rate"
+            query: 'rate(traces_spanmetrics_calls_total{$__tags,status_code="STATUS_CODE_ERROR"}[$__rate_interval])'
+    # correlations:
+    #   - targetUID: postgres
+    #     label: "Count $$beast in table"
+    #     description: ""
+    #     config:
+    #       type: query
+    #       field: tags
+    #       target:
+    #         editorMode: code
+    #         format: table
+    #         rawQuery: true
+    #         rawSql: "SELECT COUNT(*) FROM $$beast;"
+    #         refId: A
+    #         sql:
+    #           columns:
+    #             - parameters: []
+    #               type: function
+    #           groupBy:
+    #             - property:
+    #                 type: string
+    #               type: groupBy
+    #           limit: 50
+    #       transformations:
+    #         - type: regex
+    #           expression: .*{"value":"(.*?)","key":"beast".*}
+    #           mapValue: beast
+    #   - targetUID: postgres
+    #     label: "$$statement"
+    #     description: "Runs the found DB statement in the span"
+    #     config:
+    #       type: query
+    #       field: tags
+    #       target:
+    #         editorMode: code
+    #         filters:
+    #           - operator: "="
+    #             scope: span
+    #         format: table
+    #         limit: 20
+    #         queryType: traceqlSearch
+    #         rawQuery: true
+    #         rawSql: "$$statement;"
+    #         refId: A
+    #         sql:
+    #           columns:
+    #             - parameters: []
+    #               type: function
+    #           groupBy:
+    #             - property:
+    #                 type: string
+    #               type: groupBy
+    #           limit: 50
+    #       transformations:
+    #         - type: regex
+    #           expression: .*{"value":"(.*?)","key":"db.statement".*}
+    #           mapValue: statement
   - name: Mimir
     type: prometheus
     access: proxy
