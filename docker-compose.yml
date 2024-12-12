@@ -64,7 +64,6 @@ services:
     restart: always
     ports:
       - "5000:5000"
-      - "80:80"
     depends_on:
       - votting-app-database
     environment:
