@@ -60,9 +60,152 @@ services:
     networks:
       - voting-app-network
 
+  alloy:
+    image: grafana/alloy:v1.3.1
+    container_name: alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - "./alloy/config.alloy:/etc/alloy/config.alloy"
+      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
+    command: [
+      "run",
+      "--server.http.listen-addr=0.0.0.0:12345",
+      "--stability.level=public-preview",
+      "/etc/alloy/config.alloy",
+    ]
+    networks:
+      - voting-app-network
+
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
+    command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yaml "]
+    networks:
+      - voting-app-network
+  
+  mimir:
+    image: grafana/mimir:2.13.0
+    container_name: mimir
+    ports:
+      - "9009:9009"
+    volumes:
+      - ./mimir/mimir-config.yaml:/etc/mimir/mimir-config.yaml
+    command:
+      [
+        "-ingester.native-histograms-ingestion-enabled=true",
+        "-config.file=/etc/mimir/mimir-config.yaml",
+      ]
+    networks:
+      - voting-app-network
+  
+  tempo:
+    image: grafana/tempo:2.6.0
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    command: ["-config.file=/etc/tempo-config.yaml"]
+    volumes:
+      - "./tempo/tempo-config.yaml:/etc/tempo-config.yaml"
+    networks:
+      - voting-app-network
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    volumes:
+      - "./grafana/provisioning:/etc/grafana/provisioning"
+      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - voting-app-network     
+
+  graphite:
+    image: graphiteapp/graphite-statsd:latest
+    container_name: graphite
+    ports:
+      - "8081:80" 
+      - "2003-2004:2003-2004"
+      - "8125:8125/udp" 
+    environment:
+      - GRAPHITE_TIME_ZONE=UTC
+    volumes:
+      - graphite-data:/opt/graphite/storage
+    networks:
+      - voting-app-network
+
+  influxdb:
+    image: influxdb:2.0
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - name=value
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=12345678
+      - DOCKER_INFLUXDB_INIT_ORG=grafana
+      - DOCKER_INFLUXDB_INIT_BUCKET=metrics
+    user: "1000:1000"
+    volumes:
+      - influxdb-data:/var/lib/influxdb 
+    networks:
+      - voting-app-network
+
+  influxdb_exporter:
+    image: prom/influxdb-exporter
+    container_name: influxdb_exporter
+    ports:
+      - "9122:9122"
+    environment:
+      INFLUXDB_URL: http://influxdb:8086
+    depends_on:
+      - influxdb
+    networks:
+      - voting-app-network
+
+  telegraf:
+    image: telegraf
+    container_name: telegraf
+    restart: always
+    user: root
+    entrypoint: /bin/bash -c "chmod 777 /var/run/docker.sock && /entrypoint.sh telegraf"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /:/hostfs
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+    environment:
+      - HOST_ETC=/hostfs/etc
+      - HOST_PROC=/hostfs/proc
+      - HOST_SYS=/hostfs/sys
+      - HOST_VAR=/hostfs/var
+      - HOST_RUN=/hostfs/run
+      - HOST_MOUNT_PREFIX=/hostfs
+    depends_on:
+      - influxdb
+    links:
+      - influxdb 
+    ports:
+      - "8125:8125"
+    networks:
+      - voting-app-network
+
 networks:
   voting-app-network:
     driver: bridge
 
 volumes:
+  grafana:
   postgres:
+  graphite-data:
+  influxdb-data:
