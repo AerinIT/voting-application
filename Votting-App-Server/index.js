@@ -95,7 +95,7 @@ const cors = require('cors');
 
             // Log the creation of the new topic
             logEntry({
-                level: 'info',
+                level: 'debug',
                 traceID: traceId,
                 namespace: process.env.NAMESPACE,
                 job: `${servicePrefix}-server`,
@@ -259,7 +259,7 @@ const cors = require('cors');
             responseMetric(metricBody);
 
             logEntry({
-                level: 'info',
+                level: 'debug',
                 traceID: traceId,
                 namespace: process.env.NAMESPACE,
                 job: `${servicePrefix}-server`,
@@ -345,7 +345,7 @@ const cors = require('cors');
             responseMetric(metricBody);
     
             logEntry({
-                level: 'info',
+                level: 'debug',
                 traceID: traceId,
                 namespace: process.env.NAMESPACE,
                 job: `${servicePrefix}-server`,
@@ -410,7 +410,7 @@ const cors = require('cors');
                 const results = await pgClient.query(`SELECT datname FROM pg_database WHERE datname = '${spanTag}'`);
                 if (results.rows.length === 0) {
                     logEntry({
-                        level: 'info',
+                        level: 'debug',
                         job: `${servicePrefix}-server`,
                         namespace: process.env.NAMESPACE,
                         message: `Database '${spanTag}' not found, creating...`,

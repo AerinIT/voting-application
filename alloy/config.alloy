@@ -2,12 +2,45 @@ local.file "endpoints" {
     filename = "/etc/alloy/endpoints.json"
 }
 
+
+loki.source.api "votting" {
+    http {
+        listen_address = "0.0.0.0"
+        listen_port = "3100"
+    }
+    forward_to = [loki.process.votting.receiver]
+}
+
+loki.process "votting" {
+    stage.regex {
+        expression=`^.*?loggedtime=(?P<loggedtime>\S+)`
+    }
+    stage.timestamp {
+        source = "loggedtime"
+        format = "2006-01-02T15:04:05.000Z07:00"
+    }
+    forward_to = [loki.write.votting.receiver]
+}
+
+loki.write "votting" {
+    endpoint {
+        url = json_path(local.file.endpoints.content, ".logs.url")[0]
+        basic_auth {
+            username = json_path(local.file.endpoints.content, ".logs.basicAuth.username")[0]
+            password = json_path(local.file.endpoints.content, ".logs.basicAuth.password")[0]
+        }
+    }
+}
+
+////////mimir 
+
 prometheus.scrape "mltpg_infra" {
     targets = [
         {"__address__" = "mimir:9009", group = "infrastructure", service = "mimir"},
         {"__address__" = "tempo:3200", group = "infrastructure", service = "tempo"},
         {"__address__" = "loki:3100", group = "infrastructure", service = "loki"},
         {"__address__" = "grafana:3000", group = "infrastructure", service = "grafana"},
+        {"__address__" = "votting-app-database:5432 ", group = "infrastructure", service = "votting-app-database"},
     ]
     scrape_interval = "15s"
     forward_to = [prometheus.remote_write.mimir.receiver]
@@ -17,6 +50,7 @@ prometheus.scrape "mltpg_infra" {
 prometheus.scrape "votting" {
     targets = [
         {"__address__" = "votting-app-server:4000", group = "votting", service = "votting-app-server"},
+        {"__address__" = "votting-app-client:3001", group = "votting", service = "votting-app-client"},
     ]
     scrape_interval = "2s"
     scrape_timeout = "2s"
@@ -49,34 +83,9 @@ prometheus.remote_write "mimir" {
     }
 }
 
-loki.source.api "votting" {
-    http {
-        listen_address = "0.0.0.0"
-        listen_port = "3100"
-    }
-    forward_to = [loki.process.votting.receiver]
-}
 
-loki.process "votting" {
-    stage.regex {
-        expression=`^.*?loggedtime=(?P<loggedtime>\S+)`
-    }
-    stage.timestamp {
-        source = "loggedtime"
-        format = "2006-01-02T15:04:05.000Z07:00"
-    }
-    forward_to = [loki.write.votting.receiver]
-}
 
-loki.write "votting" {
-    endpoint {
-        url = json_path(local.file.endpoints.content, ".logs.url")[0]
-        basic_auth {
-            username = json_path(local.file.endpoints.content, ".logs.basicAuth.username")[0]
-            password = json_path(local.file.endpoints.content, ".logs.basicAuth.password")[0]
-        }
-    }
-}
+/////////Tempo 
 
 otelcol.receiver.otlp "otlp_receiver" {
     grpc {
@@ -135,19 +144,41 @@ otelcol.exporter.loki "autologging" {
 }
 
 loki.process "autologging" {
+    forward_to = [loki.write.autologging.receiver]
+
     stage.json {
-        expressions = { "body" = "" }
+        expressions = {
+            body = "body",
+        }
     }
-    stage.output {
+
+    stage.regex {
+        expression = "span=\"?(?P<span>[^\"]+)\"?\\s+dur=(?P<dur>\\d+)ns\\s+(?:http\\.method=(?P<http_method>\\w+)\\s+http\\.target=(?P<http_target>[^\\s]+)\\s+http\\.status_code=(?P<http_status_code>\\d+)\\s+)?svc=(?P<svc>[^\\s]+)\\s+traceId=(?P<traceId>[a-f0-9]+)"
         source = "body"
     }
-    forward_to = [loki.write.autologging.receiver]
+
+    stage.structured_metadata {
+        values = {
+            trace_id         = "traceId",
+            service          = "svc",
+            duration_ns      = "dur",
+            span             = "span",
+            http_method      = "http_method",
+            http_target      = "http_target",
+            http_status_code = "http_status_code",
+        }
+    }
+
+    stage.output {
+        source = "{{ .time }} | svc={{ .svc }} | traceId={{ .traceId }} | span={{ .span }} | duration_ns={{ .dur }}{{ if .http_method }} | http.method={{ .http_method }} http.target={{ .http_target }} http.status_code={{ .http_status_code }}{{ end }}"
+    }
 }
 
 loki.write "autologging" {
     external_labels = {
         job = "alloy",
     }
+
     endpoint {
         url = json_path(local.file.endpoints.content, ".logs.url")[0]
         basic_auth {
@@ -156,6 +187,7 @@ loki.write "autologging" {
         }
     }
 }
+
 
 otelcol.processor.tail_sampling "errors" {
     decision_wait = "30s"
@@ -219,3 +251,5 @@ otelcol.connector.servicegraph "tracemetrics" {
 otelcol.exporter.prometheus "tracemetrics" {
     forward_to = [prometheus.remote_write.mimir.receiver]
 }
+
+///////////////////

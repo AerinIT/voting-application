@@ -1,13 +1,14 @@
 {
-    "metrics": {
-        "url": "http://mimir:9009/api/v1/push",
+
+    "logs": {
+        "url": "http://loki:3100/loki/api/v1/push",
         "basicAuth": {
             "username": "",
             "password": ""
         }
     },
-    "logs": {
-        "url": "http://loki:3100/loki/api/v1/push",
+    "metrics": {
+        "url": "http://mimir:9009/api/v1/push",
         "basicAuth": {
             "username": "",
             "password": ""
@@ -22,3 +23,8 @@
         }
     }
 }
+
+
+
+
+
