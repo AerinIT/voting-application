@@ -103,6 +103,7 @@ services:
       ]
     networks:
       - voting-app-network
+    
 
 networks:
   voting-app-network:
