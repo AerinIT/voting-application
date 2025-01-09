@@ -43,3 +43,33 @@ datasources:
       timeInterval: "2s"
 
 
+  - name: 
+    type: loki
+    access: proxy
+    url: 
+    basicAuth: true
+    basicAuthUser: 
+    jsonData:
+      maxLines: 1000
+    secureJsonData:
+      basicAuthPassword: 
+    version: 1
+
+
+  - name: 
+    type: prometheus
+    access: proxy
+    url: 
+    basicAuth: true
+    basicAuthUser: 
+    jsonData:
+      timeInterval: 1s
+    secureJsonData:
+      basicAuthPassword: 
+    version: 1
+
+
+
+
+
+
