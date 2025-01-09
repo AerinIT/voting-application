@@ -88,7 +88,21 @@ services:
     networks:
       - voting-app-network
 
-
+  
+  mimir:
+    image: grafana/mimir:2.13.0
+    container_name: mimir
+    ports:
+      - "9009:9009"
+    volumes:
+      - ./mimir/mimir-config.yaml:/etc/mimir/mimir-config.yaml
+    command:
+      [
+        "-ingester.native-histograms-ingestion-enabled=true",
+        "-config.file=/etc/mimir/mimir-config.yaml",
+      ]
+    networks:
+      - voting-app-network
 
 networks:
   voting-app-network:

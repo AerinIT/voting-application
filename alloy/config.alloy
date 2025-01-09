@@ -33,4 +33,51 @@ loki.write "voting" {
 }
 
 
+prometheus.scrape "lgtm_infra" {
+    targets = [
+        {"__address__" = "mimir:9009", group = "infrastructure", service = "mimir"},
+        {"__address__" = "tempo:3200", group = "infrastructure", service = "tempo"},
+        {"__address__" = "loki:3100", group = "infrastructure", service = "loki"},
+        {"__address__" = "grafana:3000", group = "infrastructure", service = "grafana"},
+        {"__address__" = "voting-app-database:5432 ", group = "infrastructure", service = "voting-app-database"},
+    ]
+    scrape_interval = "15s"
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "lgtm_infra"
+}
+prometheus.scrape "voting" {
+    targets = [
+        {"__address__" = "voting-app-server:4000", group = "voting", service = "voting-app-server"    },
+    ]
+    scrape_interval = "2s"
+    scrape_timeout = "2s"
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "server"
+}
+prometheus.scrape "alloy" {
+    targets = [{"__address__" = "localhost:12345", group = "infrastructure", service = "alloy"}]
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "alloy"
+}
+prometheus.exporter.unix "default" {
+}
+prometheus.scrape "unix" {
+    targets = prometheus.exporter.unix.default.targets
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "node_exporter"
+}
+
+
+prometheus.remote_write "mimir" {
+    endpoint {
+        url = json_path(local.file.endpoints.content, ".metrics.url")[0]
+        basic_auth {
+            username = json_path(local.file.endpoints.content, ".metrics.basicAuth.username")[0]
+            password = json_path(local.file.endpoints.content, ".metrics.basicAuth.password")[0]
+        }
+    }
+}
+
+
+
 
