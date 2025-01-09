@@ -1,0 +1,56 @@
+{
+    "title": "CPU Usage Alert",
+    "ruleGroup": "CPU Alerts",
+    "folderUID": "Folder UID",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "queryType": "flux",
+        "datasourceUid": "Data Source UID",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "model": {
+          "query": "from(bucket: \"metrics\")\n |> range(start: v.timeRangeStart, stop: v.timeRangeStop)\n |> filter(fn: (r) => r[\"_measurement\"] == \"docker_container_cpu\")\n |> filter(fn: (r) => r[\"_field\"] == \"usage_total\")\n |> aggregateWindow(every: v.windowPeriod, fn: last, createEmpty: false)\n |> yield(name: \"last\")"
+        }
+      },
+      {
+        "refId": "B",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "-100",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [80],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "type": "classic_conditions"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m"
+  } 
+  
+  
