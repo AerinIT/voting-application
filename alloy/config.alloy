@@ -144,15 +144,39 @@ otelcol.connector.spanlogs "autologging" {
 otelcol.exporter.loki "autologging" {
     forward_to = [loki.process.autologging.receiver]
 }
+
+
 loki.process "autologging" {
+    forward_to = [loki.write.autologging.receiver]
+
     stage.json {
-        expressions = { "body" = "" }
+        expressions = {
+            body = "body",
+        }
     }
-    stage.output {
+
+    stage.regex {
+        expression = "span=\"?(?P<span>[^\"]+)\"?\\s+dur=(?P<dur>\\d+)ns\\s+(?:http\\.method=(?P<http_method>\\w+)\\s+http\\.target=(?P<http_target>[^\\s]+)\\s+http\\.status_code=(?P<http_status_code>\\d+)\\s+)?svc=(?P<svc>[^\\s]+)\\s+traceId=(?P<traceId>[a-f0-9]+)"
         source = "body"
     }
-    forward_to = [loki.write.autologging.receiver]
+
+    stage.structured_metadata {
+        values = {
+            trace_id         = "traceId",
+            service          = "svc",
+            duration_ns      = "dur",
+            span             = "span",
+            http_method      = "http_method",
+            http_target      = "http_target",
+            http_status_code = "http_status_code",
+        }
+    }
+
+    stage.output {
+        source = "{{ .time }} | svc={{ .svc }} | traceId={{ .traceId }} | span={{ .span }} | duration_ns={{ .dur }}{{ if .http_method }} | http.method={{ .http_method }} http.target={{ .http_target }} http.status_code={{ .http_status_code }}{{ end }}"
+    }
 }
+
 loki.write "autologging" {
     external_labels = {
         job = "alloy",

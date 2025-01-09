@@ -85,6 +85,8 @@ services:
     volumes:
       - ./loki/loki-config.yaml:/etc/loki/local-config.yaml
     command: ["--pattern-ingester.enabled=true", "-config.file=/etc/loki/local-config.yaml "]
+    environment:
+      - LOKI_VALIDATION_ALLOW_STRUCTURED_METADATA=true
     networks:
       - voting-app-network
 
