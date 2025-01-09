@@ -68,6 +68,17 @@ prometheus.scrape "unix" {
 }
 
 
+prometheus.scrape "influxdb_exporter" {
+  targets = [
+    {
+      __address__ = "influxdb_exporter:9122",
+    },
+  ]
+  forward_to     = [prometheus.remote_write.mimir.receiver]
+  job_name       = "influxdb-exporter"
+  scrape_timeout = "60s"
+}
+
 prometheus.remote_write "mimir" {
     endpoint {
         url = json_path(local.file.endpoints.content, ".metrics.url")[0]
