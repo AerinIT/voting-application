@@ -120,7 +120,35 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
       - voting-app-network
-    
+  
+  graphite:
+    image: graphiteapp/graphite-statsd:1.1.10-5
+    container_name: graphite
+    ports:
+      - "8081:80" 
+      - "2003-2004:2003-2004"
+      - "8125:8125/udp" 
+    environment:
+      - GRAPHITE_TIME_ZONE=UTC
+    volumes:
+      - graphite-data:/opt/graphite/storage
+    networks:
+      - voting-app-network
+  
+  influxdb:
+    image: influxdb:2.0
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb
+    environment:
+      INFLUXDB_DB: mydb
+      INFLUXDB_ADMIN_USER: "admin"
+      INFLUXDB_ADMIN_PASSWORD: "password"
+    networks:
+      - voting-app-network
+   
 
 networks:
   voting-app-network:
@@ -129,3 +157,6 @@ networks:
 volumes:
   grafana:
   postgres:
+  graphite-data:
+  influxdb-data:
+
