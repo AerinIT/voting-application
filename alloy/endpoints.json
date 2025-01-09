@@ -1,0 +1,10 @@
+{
+    "logs": {
+        "url": "http://loki:3100/loki/api/v1/push",
+        "basicAuth": {
+            "username": "",
+            "password": ""
+        }
+    }
+ }
+ 
