@@ -209,6 +209,19 @@ services:
       - "8125:8125"
     networks:
       - voting-app-network
+  
+  synthetic-monitoring-agent:
+    image: grafana/synthetic-monitoring-agent:v0.29.9
+    container_name: synthetic-monitoring-agent
+    restart: unless-stopped
+    command:
+      - '--api-server-address=<API_SERVER>'
+      - '--api-token=<API_TOKEN>'
+      - '--verbose=true'
+    networks:
+      - voting-app-network
+
+
 
 
 networks:
