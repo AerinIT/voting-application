@@ -103,6 +103,23 @@ services:
       ]
     networks:
       - voting-app-network
+
+  
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: grafana
+    volumes:
+      - "./grafana/provisioning:/etc/grafana/provisioning"
+      - "./grafana/grafana.ini:/etc/grafana/grafana.ini"
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_FEATURE_TOGGLES_ENABLE=flameGraph traceqlSearch traceQLStreaming correlations metricsSummary traceqlEditor traceToMetrics traceToProfiles datatrails
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app,grafana-exploretraces-app
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - voting-app-network
     
 
 networks:
@@ -110,4 +127,5 @@ networks:
     driver: bridge
 
 volumes:
+  grafana:
   postgres:
