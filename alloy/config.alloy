@@ -1,0 +1,191 @@
+local.file "endpoints" {
+    filename = "/etc/alloy/endpoints.json"
+}
+
+loki.source.api "voting" {
+    http {
+        listen_address = "0.0.0.0"
+        listen_port = "3100"
+    }
+    forward_to = [loki.process.voting.receiver]
+}
+
+loki.process "voting" {
+    stage.regex {
+        expression=`^.*?loggedtime=(?P<loggedtime>\S+)`
+    }
+    stage.timestamp {
+        source = "loggedtime"
+        format = "2006-01-02T15:04:05.000Z07:00"
+    }
+    forward_to = [loki.write.voting.receiver]
+}
+
+loki.write "voting" {
+    endpoint {
+        url = json_path(local.file.endpoints.content, ".logs.url")[0]
+        basic_auth {
+            username = json_path(local.file.endpoints.content, ".logs.basicAuth.username")[0]
+            password = json_path(local.file.endpoints.content, ".logs.basicAuth.password")[0]
+        }
+    }
+}
+
+prometheus.scrape "infra" {
+    targets = [
+        {"__address__" = "voting-app-database:5432 ", group = "infrastructure", service = "voting-app-database"},
+    ]
+    scrape_interval = "15s"
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "infra"
+}
+prometheus.scrape "voting" {
+    targets = [
+        {"__address__" = "voting-app-server:5000", group = "voting", service = "voting-app-server"    },
+    ]
+    scrape_interval = "2s"
+    scrape_timeout = "2s"
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "server"
+}
+prometheus.scrape "alloy" {
+    targets = [{"__address__" = "localhost:12345", group = "infrastructure", service = "alloy"}]
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "alloy"
+}
+prometheus.exporter.unix "default" {
+}
+prometheus.scrape "unix" {
+    targets = prometheus.exporter.unix.default.targets
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    job_name = "node_exporter"
+}
+
+prometheus.remote_write "mimir" {
+    endpoint {
+        url = json_path(local.file.endpoints.content, ".metrics.url")[0]
+        basic_auth {
+            username = json_path(local.file.endpoints.content, ".metrics.basicAuth.username")[0]
+            password = json_path(local.file.endpoints.content, ".metrics.basicAuth.password")[0]
+        }
+    }
+}
+prometheus.exporter.cadvisor "docker_metrics" {
+    docker_only = false
+    store_container_labels = true
+    docker_host = "unix:///var/run/docker.sock"
+}
+
+prometheus.scrape "docker_metrics" {
+    targets    = prometheus.exporter.cadvisor.docker_metrics.targets
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    scrape_interval = "15s"
+}
+
+otelcol.receiver.otlp "tracemetrics" {
+    grpc {
+        endpoint = "0.0.0.0:4317"
+    }
+    output {
+        traces = [
+            otelcol.processor.batch.default.input,
+            otelcol.connector.servicegraph.tracemetrics.input,
+            otelcol.connector.spanlogs.autologging.input,
+        ]
+    }
+}
+
+otelcol.connector.servicegraph "tracemetrics" {
+    dimensions = [
+        "http.method",
+        "http.target",
+        "http.status_code",
+        "service.version",
+    ]
+    output {
+        metrics = [otelcol.exporter.prometheus.tracemetrics.input]
+    }
+}
+otelcol.processor.batch "default" {
+    send_batch_size = 1000
+    send_batch_max_size = 2000
+    timeout = "2s"
+    output {
+        traces = [otelcol.exporter.otlp.tempo.input]
+    }
+}
+
+otelcol.exporter.otlp "tempo" {
+    client {
+        auth = otelcol.auth.basic.grafanacloud.handler
+        endpoint = json_path(local.file.endpoints.content, ".traces.url")[0]
+
+    }
+}
+
+otelcol.connector.spanlogs "autologging" {
+    spans = false
+    roots = true
+    processes = false
+    span_attributes = [ "http.method", "http.target", "http.status_code" ]
+    overrides {
+        trace_id_key = "traceId"
+    }
+    output {
+        logs = [otelcol.exporter.loki.autologging.input]
+    }
+}
+otelcol.exporter.loki "autologging" {
+    forward_to = [loki.process.autologging.receiver]
+}
+loki.process "autologging" {
+    stage.json {
+        expressions = { "body" = "" }
+    }
+    stage.output {
+        source = "body"
+    }
+    forward_to = [loki.write.autologging.receiver]
+}
+loki.write "autologging" {
+    external_labels = {
+        job = "alloy",
+    }
+    endpoint {
+        url = json_path(local.file.endpoints.content, ".logs.url")[0]
+
+        basic_auth {
+            username = json_path(local.file.endpoints.content, ".logs.basicAuth.username")[0]0
+            password = json_path(local.file.endpoints.content, ".logs.basicAuth.password")[0]
+        }
+    }
+}
+
+otelcol.connector.spanmetrics "tracemetrics" {
+    namespace = "traces.spanmetrics"
+    dimension {
+        name = "http.method"
+    }
+    dimension {
+        name = "http.target"
+    }
+    dimension {
+        name = "http.status_code"
+    }
+    dimension {
+        name = "service.version"
+    }
+    histogram {
+        explicit {}
+    }
+    exemplars {
+        enabled = true
+    }
+    output {
+        metrics = [otelcol.exporter.prometheus.tracemetrics.input]
+    }
+}
+
+otelcol.exporter.prometheus "tracemetrics" {
+    forward_to = [prometheus.remote_write.mimir.receiver]
+}

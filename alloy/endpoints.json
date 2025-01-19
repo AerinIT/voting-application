@@ -1,0 +1,24 @@
+{
+    "logs": {
+        "url": "",
+        "basicAuth": {
+            "username": "",
+            "password": ""
+        }
+    },
+    "metrics": {
+        "url": "",
+        "basicAuth": {
+            "username": "",
+            "password": ""
+        }
+    },
+    "traces": {
+        "url": "",
+        "basicAuth": {
+            "username": "",
+            "password": ""
+        }
+    }
+ }
+ 
