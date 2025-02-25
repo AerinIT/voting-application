@@ -85,119 +85,39 @@ loki.write "voting" {
     }
 }
 
-///tempo
 
+discovery.docker "logs_integrations_docker" {
+    host             = "unix:///var/run/docker.sock"
+    refresh_interval = "5s"
+}
+discovery.relabel "logs_integrations_docker" {
+    targets = []
 
-otelcol.receiver.otlp "otlp_receiver" {
-    grpc {
-        endpoint = "0.0.0.0:4317"
+    rule {
+        target_label = "job"
+        replacement  = "integrations/docker"
     }
-    output {
-        traces = [
-            otelcol.processor.batch.default.input,
-            otelcol.connector.spanlogs.autologging.input,
-        ]
+
+    rule {
+        target_label = "instance"
+        replacement  = constants.hostname
+    }
+
+    rule {
+        source_labels = ["__meta_docker_container_name"]
+        regex         = "/(.*)"
+        target_label  = "container"
+    }
+
+    rule {
+        source_labels = ["__meta_docker_container_log_stream"]
+        target_label  = "stream"
     }
 }
-otelcol.processor.batch "default" {
-    send_batch_size = 1000
-    send_batch_max_size = 2000
-    timeout = "2s"
-    output {
-        traces = [otelcol.exporter.otlp.tempo.input]
-    }
+loki.source.docker "logs_integrations_docker" {
+    host             = "unix:///var/run/docker.sock"
+    targets          = discovery.docker.logs_integrations_docker.targets
+    forward_to       = [loki.write.voting.receiver]
+    relabel_rules    = discovery.relabel.logs_integrations_docker.rules
+    refresh_interval = "5s"
 }
-
-
-otelcol.exporter.otlp "tempo" {
-    client {
-        auth = otelcol.auth.basic.grafanacloud.handler
-        endpoint = json_path(local.file.endpoints.content, ".traces.url")[0]
-    }
-}
-
-otelcol.auth.basic "grafanacloud" {
-  username = json_path(local.file.endpoints.content, ".traces.basicAuth.username")[0]
-  password = json_path(local.file.endpoints.content, ".traces.basicAuth.password")[0]
-}
-
-
-otelcol.connector.spanlogs "autologging" {
-    spans = false
-    roots = true
-    processes = false
-    span_attributes = [ "http.method", "http.target", "http.status_code" ]
-    overrides {
-        trace_id_key = "traceId"
-    }
-    output {
-        logs = [otelcol.exporter.loki.autologging.input]
-    }
-}
-otelcol.exporter.loki "autologging" {
-    forward_to = [loki.process.autologging.receiver]
-}
-loki.process "autologging" {
-    stage.json {
-        expressions = { "body" = "" }
-    }
-    stage.output {
-        source = "body"
-    }
-    forward_to = [loki.write.autologging.receiver]
-}
-loki.write "autologging" {
-    external_labels = {
-        job = "alloy",
-    }
-    endpoint {
-        url = json_path(local.file.endpoints.content, ".logs.url")[0]
-
-        basic_auth {
-            username = json_path(local.file.endpoints.content, ".logs.basicAuth.username")[0]
-            password = json_path(local.file.endpoints.content, ".logs.basicAuth.password")[0]
-        }
-    }
-}
-
-
-otelcol.connector.spanmetrics "tracemetrics" {
-    namespace = "traces.spanmetrics"
-    dimension {
-        name = "http.method"
-    }
-    dimension {
-        name = "http.target"
-    }
-    dimension {
-        name = "http.status_code"
-    }
-    dimension {
-        name = "service.version"
-    }
-    histogram {
-        explicit {}
-    }
-    exemplars {
-        enabled = true
-    }
-    output {
-        metrics = [otelcol.exporter.prometheus.tracemetrics.input]
-    }
-}
-
-otelcol.exporter.prometheus "tracemetrics" {
-    forward_to = [prometheus.remote_write.mimir.receiver]
-}
-otelcol.connector.servicegraph "tracemetrics" {
-    dimensions = [
-        "http.method",
-        "http.target",
-        "http.status_code",
-        "service.version",
-    ]
-    output {
-        metrics = [otelcol.exporter.prometheus.tracemetrics.input]
-    }
-}
-
