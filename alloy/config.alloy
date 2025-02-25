@@ -43,3 +43,12 @@ prometheus.remote_write "mimir" {
     }
 }
 
+prometheus.scrape "metrics_scraper" {
+  targets = [
+    {"__address__" = "cadvisor:8080"},
+  ]
+  forward_to = [prometheus.remote_write.mimir.receiver]
+
+  scrape_interval = "10s"
+  metrics_path    = "/metrics"
+}
