@@ -1,0 +1,176 @@
+
+{
+    "title": "CPU Usage Alert",
+    "ruleGroup": "CPU Alerts",
+    "folderUID": "<your-folder-uid>",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "queryType": "promql",
+        "datasourceUid": "<your-datasource-uid>",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "expr": "sum(rate(container_cpu_usage_seconds_total[5m]))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "datasourceUid": "-100",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.003],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "type": "classic_conditions"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Alerting",
+    "for": "5m"
+  }
+  
+
+  {
+    "title": "CPU Usage Alert",
+    "ruleGroup": "CPU Alerts",
+    "folderUID": "<your-folder-uid>",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "queryType": "promql",
+        "datasourceUid": "<your-datasource-uid>",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "expr": "sum(rate(container_cpu_usage_seconds_total[5m]))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "datasourceUid": "-100",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.003],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "type": "classic_conditions"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Alerting",
+    "for": "5m"
+  }
+  
+
+  {
+    "title": "CPU Usage Alert",
+    "ruleGroup": "CPU Alerts",
+    "folderUID": "<your-folder-uid>",
+    "condition": "B",
+    "data": [
+      {
+        "refId": "A",
+        "queryType": "promql",
+        "datasourceUid": "<your-datasource-uid>",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "model": {
+          "expr": "sum(rate(container_cpu_usage_seconds_total[5m]))",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "queryType": "",
+        "relativeTimeRange": {
+          "from": 300,
+          "to": 0
+        },
+        "datasourceUid": "-100",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [0.003],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["A"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "type": "classic_conditions"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Alerting",
+    "for": "5m"
+  }      
