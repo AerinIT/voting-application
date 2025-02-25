@@ -60,6 +60,24 @@ services:
     networks:
       - voting-app-network
 
+  alloy:
+    image: grafana/alloy:v1.3.1
+    container_name: alloy
+    ports:
+      - "12345:12345"
+    volumes:
+      - "./alloy/config.alloy:/etc/alloy/config.alloy"
+      - "./alloy/endpoints.json:/etc/alloy/endpoints.json"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: [
+      "run",
+      "--server.http.listen-addr=0.0.0.0:12345",
+      "--stability.level=public-preview",
+      "/etc/alloy/config.alloy",
+    ]
+    networks:
+      - voting-app-network
+
 networks:
   voting-app-network:
     driver: bridge

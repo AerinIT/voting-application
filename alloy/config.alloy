@@ -1,0 +1,3 @@
+local.file "endpoints" {
+    filename = "/etc/alloy/endpoints.json"
+}
