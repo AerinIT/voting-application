@@ -52,3 +52,36 @@ prometheus.scrape "metrics_scraper" {
   scrape_interval = "10s"
   metrics_path    = "/metrics"
 }
+
+///loki
+
+
+loki.source.api "voting" {
+    http {
+        listen_address = "0.0.0.0"
+        listen_port = "3100"
+    }
+    forward_to = [loki.process.voting.receiver]
+}
+
+loki.process "voting" {
+    stage.regex {
+        expression=`^.*?loggedtime=(?P<loggedtime>\S+)`
+    }
+    stage.timestamp {
+        source = "loggedtime"
+        format = "2006-01-02T15:04:05.000Z07:00"
+    }
+    forward_to = [loki.write.voting.receiver]
+}
+
+loki.write "voting" {
+    endpoint {
+        url = json_path(local.file.endpoints.content, ".logs.url")[0]
+        basic_auth {
+            username = json_path(local.file.endpoints.content, ".logs.basicAuth.username")[0]
+            password = json_path(local.file.endpoints.content, ".logs.basicAuth.password")[0]
+        }
+    }
+}
+

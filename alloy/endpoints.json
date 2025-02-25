@@ -5,6 +5,13 @@
             "username": "",
             "password": ""
         }
-    }
- }
+    },
+    "logs": {
+        "url": "",
+        "basicAuth": {
+            "username": "",
+            "password": ""
+        }
+    } 
+}
  
