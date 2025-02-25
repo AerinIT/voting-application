@@ -96,6 +96,19 @@ services:
     networks:
       - voting-app-network
 
+  pdc-agent:
+    image: grafana/pdc-agent:0.0.38
+    container_name: pdc-agent
+    command:
+      - "-token"
+      - "<TOKEN>"
+      - "-cluster"
+      - "<GCLOUD_HOSTED_GRAFANA_ID>"
+      - "-gcloud-hosted-grafana-id"
+      - "<GCLOUD_PDC_CLUSTER>"
+    networks:
+      - voting-app-network
+
 networks:
   voting-app-network:
     driver: bridge
