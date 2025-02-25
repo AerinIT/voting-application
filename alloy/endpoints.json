@@ -12,6 +12,13 @@
             "username": "",
             "password": ""
         }
+    },
+    "traces": {
+        "url": "",
+        "basicAuth": {
+            "username": "",
+            "password": ""
+        }            
     } 
 }
  
