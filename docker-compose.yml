@@ -44,6 +44,10 @@ services:
     restart: always
     ports:
       - "3001:3001"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3001
+      - REACT_APP_URL=/api
     networks:
       - voting-app-network       
   

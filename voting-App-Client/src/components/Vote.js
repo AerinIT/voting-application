@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion'; // Importing Framer Motion
+import { API_URL } from '../config';
 
 const Vote = () => {
     const { topic } = useParams();
@@ -15,7 +16,7 @@ const Vote = () => {
 
     useEffect(() => {
         const fetchTopic = async () => {
-            const response = await axios.get(`http://localhost:5000/api/topics/${topic}/vote`);
+            const response = await axios.get(`${API_URL}/topics/${topic}/vote`);
             setDescription(response.data.description);
             setTopicName(response.data.topic);
         };
@@ -31,7 +32,7 @@ const Vote = () => {
         setError(''); // Clear previous error if name is valid
 
         try {
-            await axios.post(`http://localhost:5000/api/topics/${topic}/vote`, { vote, name });
+            await axios.post(`${API_URL}/topics/${topic}/vote`, { vote, name });
             setMessage('Vote counted!');
             setTimeout(() => {
                 navigate(`/results/${topic}`);

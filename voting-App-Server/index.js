@@ -54,6 +54,43 @@ const cors = require('cors');
         res.send(await register.metrics());
     });
 
+    app.get('/api/health', (req, res) => {
+        const host = req.get('host');
+        const forwardedHost = req.get('x-forwarded-host');
+        const protocol = req.get('x-forwarded-proto') || 'http';
+        
+        // Same logic as topic creation for URL generation
+        let votingHost = forwardedHost || host;
+        if (votingHost) {
+            if (protocol === 'http' && votingHost.endsWith(':80')) {
+                votingHost = votingHost.replace(':80', '');
+            } else if (protocol === 'https' && votingHost.endsWith(':443')) {
+                votingHost = votingHost.replace(':443', '');
+            }
+            if (votingHost.includes(':5000')) {
+                votingHost = votingHost.replace(':5000', '');
+            }
+        }
+        
+        res.json({ 
+            status: 'healthy', 
+            timestamp: new Date().toISOString(),
+            headers: {
+                host: req.get('host'),
+                'x-forwarded-host': req.get('x-forwarded-host'),
+                'x-forwarded-proto': req.get('x-forwarded-proto'),
+                'user-agent': req.get('user-agent')
+            },
+            urlGeneration: {
+                originalHost: host,
+                forwardedHost: forwardedHost,
+                finalVotingHost: votingHost,
+                protocol: protocol,
+                sampleVotingUrl: `${protocol}://${votingHost}/vote/123`
+            }
+        });
+    });
+
     Pyroscope.init({ appName: 'voting-app-database-server' });
     app.use(expressMiddleware());
 
@@ -107,7 +144,35 @@ const cors = require('cors');
             });
 
             // Respond with success
-            const votingUrl = `http://localhost:3001/vote/${result.rows[0].id}`;
+            const host = req.get('host');
+            const forwardedHost = req.get('x-forwarded-host');
+            const protocol = req.get('x-forwarded-proto') || 'http';
+            
+            // Determine the correct host for the voting URL
+            let votingHost = forwardedHost || host;
+            
+            // Remove port numbers for standard ports
+            if (votingHost) {
+                // Remove :80 for HTTP or :443 for HTTPS as they're default ports
+                if (protocol === 'http' && votingHost.endsWith(':80')) {
+                    votingHost = votingHost.replace(':80', '');
+                } else if (protocol === 'https' && votingHost.endsWith(':443')) {
+                    votingHost = votingHost.replace(':443', '');
+                }
+                // Remove any internal port numbers like :5000
+                if (votingHost.includes(':5000')) {
+                    votingHost = votingHost.replace(':5000', '');
+                }
+            }
+            
+            const votingUrl = `${protocol}://${votingHost}/vote/${result.rows[0].id}`;
+            
+            console.log('Generated voting URL:', votingUrl);
+            console.log('Host header:', req.get('host'));
+            console.log('X-Forwarded-Host header:', req.get('x-forwarded-host'));
+            console.log('Final voting host:', votingHost);
+            console.log('Protocol:', protocol);
+            
             res.status(201).json({ message: 'Topic created successfully!', votingUrl });
         } catch (err) {
             // Handle errors during topic creation
@@ -483,8 +548,8 @@ const cors = require('cors');
         });
     };
     
-    // Ensure the server listens on port 5000 (as per your `app.listen` call)
-    app.listen(5000, () =>
+    // Ensure the server listens on port 5000 on all interfaces
+    app.listen(5000, '0.0.0.0', () =>
         logEntry({
             level: 'info',
             namespace: process.env.NAMESPACE,
